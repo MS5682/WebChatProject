@@ -1,5 +1,5 @@
 package com.sms.webchat.enums;
 
 public enum RoomType {
-    INDIVIDUAL, GROUP
+    PRIVATE_CHAT, PUBLIC_GROUP, PROTECTED_GROUP
 } 

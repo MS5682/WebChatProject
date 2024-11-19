@@ -1,35 +1,26 @@
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Header from './components/Header';
+import Home from './components/Home';
 import ChatRoom from './components/ChatRoom';
-import './App.css';
+import Login from './components/Login';
+import Register from './components/Register';
 
 function App() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    console.log('Spring Boot 연결 확인');
-    fetch('/api/hello')
-      .then(response => {
-        console.log('Spring Boot 응답 상태:', response.status);
-        return response.text();
-      })
-      .then(data => {
-        console.log('Spring Boot 받은 데이터:', data);
-        setMessage(data);
-      })
-      .catch(error => {
-        console.error('Spring Boot 에러 발생:', error);
-      });
-  }, []);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>웹챗</h1>
-      </header>
-      <main>
-        <ChatRoom />
-      </main>
-    </div>
+    <Router>
+      <div className="app">
+        <Header isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
+        <Routes>
+          <Route path="/" element={<Home isLoggedIn={isLoggedIn} />} />
+          <Route path="/chat/:roomId" element={<ChatRoom />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

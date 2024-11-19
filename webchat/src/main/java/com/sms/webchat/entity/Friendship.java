@@ -5,34 +5,36 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import com.sms.webchat.enums.FriendshipStatus;
+
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "room_participants")
+@Table(name = "friendships")
 @Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class RoomParticipant {
+public class Friendship {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "participant_id")
+    @Column(name = "friendship_id")
     private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "from_user_id")
+    private User fromUser;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "room_id")
-    private ChatRoom room;
+    @JoinColumn(name = "to_user_id")
+    private User toUser;
+    
+    @Enumerated(EnumType.STRING)
+    private FriendshipStatus status;
     
     @CreatedDate
     @Column(updatable = false)
-    private LocalDateTime joinedAt;
-    
-    // 마지막으로 읽은 시간
-    private LocalDateTime lastReadTime;
+    private LocalDateTime createdAt;
 } 

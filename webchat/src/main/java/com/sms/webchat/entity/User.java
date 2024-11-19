@@ -32,7 +32,15 @@ public class User {
     @Column(updatable = false)
     private LocalDateTime createdAt;
     
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     @Builder.Default
     private List<RoomParticipant> participatingRooms = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "fromUser", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<Friendship> sentFriendRequests = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "toUser", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<Friendship> receivedFriendRequests = new ArrayList<>();
 } 

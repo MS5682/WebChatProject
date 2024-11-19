@@ -1,12 +1,12 @@
 package com.sms.webchat.entity;
 
+import java.time.LocalDateTime;
+
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import com.sms.webchat.enums.MessageType;
 
 @Entity
 @Table(name = "messages")
@@ -14,13 +14,16 @@ import com.sms.webchat.enums.MessageType;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EntityListeners(AuditingEntityListener.class)
 public class Message {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long messageId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "message_id")
+    private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
-    private ChatRoom chatRoom;
+    private ChatRoom room;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id")
@@ -29,16 +32,19 @@ public class Message {
     @Column(nullable = false)
     private String content;
     
-    @Enumerated(EnumType.STRING)
-    private MessageType messageType;
+    @OneToOne(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
+    private MessageAttachment attachment;
     
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
     
-    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL)
-    private List<MessageRead> messageReads;
+    // 메시지 만료 시간 (예: 30일 후 자동 삭제)
+    private LocalDateTime expiresAt;
     
-    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL)
-    private List<MessageAttachment> attachments;
+    @PrePersist
+    public void setExpiresAt() {
+        // 메시지 생성 시 30일 후로 만료 시간 설정
+        this.expiresAt = LocalDateTime.now().plusDays(30);
+    }
 } 

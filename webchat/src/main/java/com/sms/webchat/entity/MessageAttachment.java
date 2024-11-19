@@ -2,9 +2,6 @@ package com.sms.webchat.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "message_attachments")
@@ -13,20 +10,16 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class MessageAttachment {
-    @Id 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "message_id")
     private Message message;
     
-    private String fileName;
-    private String fileUrl;
-    private String fileType;
-    private Long fileSize;
-    
-    @CreatedDate
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
+    private String url;
+    private String originalName;
+    private Long size;
+    private String type;
 } 
