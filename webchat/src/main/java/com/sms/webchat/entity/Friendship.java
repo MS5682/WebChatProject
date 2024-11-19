@@ -24,11 +24,11 @@ public class Friendship {
     private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "from_user_id")
+    @JoinColumn(name = "from_user_idx")
     private User fromUser;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "to_user_id")
+    @JoinColumn(name = "to_user_idx")
     private User toUser;
     
     @Enumerated(EnumType.STRING)

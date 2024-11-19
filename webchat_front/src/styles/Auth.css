@@ -15,6 +15,8 @@
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 500;
 }
 
 .form-group input {
@@ -22,6 +24,12 @@
   padding: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #007bff;
 }
 
 button[type="submit"] {
@@ -32,8 +40,148 @@ button[type="submit"] {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
 }
 
 button[type="submit"]:hover {
   background-color: #0056b3;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.auth-links {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.auth-links a {
+  color: #666;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.auth-links a:hover {
+  color: #007bff;
+}
+
+.divider {
+  margin: 0 0.5rem;
+  color: #ddd;
+}
+
+.success-message {
+  color: #28a745;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.auth-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background-color: white;
+}
+
+.email-verification-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.email-verification-group input {
+  flex: 1;
+}
+
+.verification-button {
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.verification-button:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.verification-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+input:disabled {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.success-message {
+  color: #28a745;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.submit-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.auth-link {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.auth-link a {
+  color: #007bff;
+  text-decoration: none;
+  margin-left: 5px;
+}
+
+.auth-link a:hover {
+  text-decoration: underline;
+}
+
+.input-button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.input-button-group input {
+  flex: 1;
+}
+
+.input-button-group button {
+  padding: 8px 16px;
+  white-space: nowrap;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.input-button-group button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.input-button-group button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 } 

@@ -26,7 +26,6 @@ const Header = ({ isLoggedIn, setIsLoggedIn }) => {
         </div>
         <nav className="auth-nav">
           <Link to="/login" className="auth-button">로그인</Link>
-          <Link to="/register" className="auth-button">회원가입</Link>
           <button 
             onClick={toggleSession} 
             className="session-button"

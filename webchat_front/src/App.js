@@ -6,6 +6,8 @@ import Home from './components/Home';
 import ChatRoom from './components/ChatRoom';
 import Login from './components/Login';
 import Register from './components/Register';
+import FindId from './components/FindId';
+import FindPassword from './components/FindPassword';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -19,6 +21,8 @@ function App() {
           <Route path="/chat/:roomId" element={<ChatRoom />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/find-id" element={<FindId />} />
+          <Route path="/find-password" element={<FindPassword />} />
         </Routes>
         <Footer />
       </div>

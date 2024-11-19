@@ -22,7 +22,7 @@ public class RoomParticipant {
     private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_idx")
     private User user;
     
     @ManyToOne(fetch = FetchType.LAZY)
