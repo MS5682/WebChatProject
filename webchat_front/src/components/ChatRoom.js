@@ -121,11 +121,10 @@ function ChatRoom() {
                   sender: 'system',
                   time: new Date().toISOString()
                 }]);
-                setActiveUsers(prev => new Set([...prev, receivedMessage.sender]));
-                break;
-                
-              case 'CHAT':
-                setMessages(prevMessages => [...prevMessages, receivedMessage]);
+                // 접속자 목록 업데이트
+                if (receivedMessage.users) {
+                  setActiveUsers(new Set(receivedMessage.users));
+                }
                 break;
                 
               case 'LEAVE':
@@ -135,11 +134,21 @@ function ChatRoom() {
                   sender: 'system',
                   time: new Date().toISOString()
                 }]);
-                setActiveUsers(prev => {
-                  const newUsers = new Set(prev);
-                  newUsers.delete(receivedMessage.sender);
-                  return newUsers;
-                });
+                // 접속자 목록 업데이트
+                if (receivedMessage.users) {
+                  setActiveUsers(new Set(receivedMessage.users));
+                }
+                break;
+
+              case 'ACTIVE_USERS':
+                // 활성 사용자 목록 업데이트
+                if (receivedMessage.users) {
+                  setActiveUsers(new Set(receivedMessage.users));
+                }
+                break;
+                
+              case 'CHAT':
+                setMessages(prevMessages => [...prevMessages, receivedMessage]);
                 break;
             }
           } catch (error) {
@@ -155,6 +164,12 @@ function ChatRoom() {
             type: 'JOIN',
             time: new Date().toISOString()
           })
+        });
+
+        // 현재 활성 사용자 목록 요청
+        client.publish({
+          destination: '/app/chat.activeUsers',
+          body: JSON.stringify({})
         });
       },
       onDisconnect: () => {
