@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import '../styles/Home.css';
 
 const Home = ({ isLoggedIn }) => {
-  const [activeTab, setActiveTab] = useState('open'); // 'open', 'joined', 'direct'
+  const [activeTab, setActiveTab] = useState('open');
   const [openChatRooms, setOpenChatRooms] = useState([]);
   const [myChatRooms, setMyChatRooms] = useState([]);
   const [directMessages, setDirectMessages] = useState([]);
@@ -14,7 +14,6 @@ const Home = ({ isLoggedIn }) => {
 
   const fetchChatRooms = async () => {
     try {
-      // 더미 데이터
       setOpenChatRooms([
         { id: 1, name: '일반채팅방', description: '누구나 참여가능한 채팅방입니다.', participantCount: 5 },
         { id: 2, name: '정보공유방', description: '정보를 공유하는 채팅방입니다.', participantCount: 3 },
@@ -36,7 +35,7 @@ const Home = ({ isLoggedIn }) => {
     }
   };
 
-  const renderContent = () => {
+  const renderTabContent = () => {
     switch (activeTab) {
       case 'open':
         return (
@@ -80,28 +79,27 @@ const Home = ({ isLoggedIn }) => {
   return (
     <div className="home">
       <div className="tabs">
-        <button 
+        <button
           className={`tab ${activeTab === 'open' ? 'active' : ''}`}
           onClick={() => setActiveTab('open')}
         >
-          오픈채팅
+          오픈 채팅
         </button>
-        <button 
+        <button
           className={`tab ${activeTab === 'joined' ? 'active' : ''}`}
           onClick={() => setActiveTab('joined')}
         >
           참여중인 채팅
         </button>
-        <button 
+        <button
           className={`tab ${activeTab === 'direct' ? 'active' : ''}`}
           onClick={() => setActiveTab('direct')}
         >
           1:1 채팅
         </button>
       </div>
-
-      <div className="content">
-        {renderContent()}
+      <div className="home-content">
+        {renderTabContent()}
       </div>
     </div>
   );

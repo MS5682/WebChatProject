@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import '../styles/ChatRoom.css';
-import { FiPaperclip, FiImage, FiFile } from 'react-icons/fi';  
+import { FiPaperclip, FiImage, FiFile, FiArrowLeft } from 'react-icons/fi';  
 import SockJS from 'sockjs-client';
+import { useNavigate } from 'react-router-dom';
 
 // ChatInputForm을 별도의 컴포넌트로 분리하고 React.memo로 감싸기
 const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
@@ -48,6 +49,8 @@ const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
 });
 
 function ChatRoom() {
+  const navigate = useNavigate();
+
   // 상태 관리를 위한 state 선언
   const [messages, setMessages] = useState([]); // 채팅 메시지 목록
   const [newMessage, setNewMessage] = useState(''); // 새로운 메시지 입력값
@@ -59,7 +62,11 @@ function ChatRoom() {
   const [activeUsers, setActiveUsers] = useState(new Set()); // 현재 접속중인 사용자 목록
   const [selectedFile, setSelectedFile] = useState(null);  // 선택된 파일 상태 추가
   const messagesEndRef = useRef(null);  // 스크롤을 위한 ref 추가
-
+  const [userListWidth, setUserListWidth] = useState(200);
+  const isResizing = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+  const chatMessagesRef = useRef(null);
 
   // 컴포넌트 마운트 시 채팅 초기화
   useEffect(() => {
@@ -291,11 +298,48 @@ function ChatRoom() {
     );
   };
 
+  const handleMouseDown = (e) => {
+    isResizing.current = true;
+    startX.current = e.clientX;
+    startWidth.current = userListWidth;
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing.current) return;
+    const diff = e.clientX - startX.current;
+    const newWidth = Math.max(150, Math.min(400, startWidth.current + diff));
+    setUserListWidth(newWidth);
+  };
+
+  const handleMouseUp = () => {
+    isResizing.current = false;
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
+  // 채팅창만 스크롤하는 함수
+  const scrollToBottom = () => {
+    if (chatMessagesRef.current) {
+      const { scrollHeight, clientHeight } = chatMessagesRef.current;
+      chatMessagesRef.current.scrollTo({
+        top: scrollHeight - clientHeight,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // 새 메시지가 추가될 때마다 스크롤
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   // UI 렌더링
   return (
     <div className="chat-container">
-      {/* 접속자 목록 영역 */}
-      <div className="user-list">
+      <div className="user-list" style={{ width: userListWidth }}>
+        <div className="resize-handle" onMouseDown={handleMouseDown}></div>
         <h3>접속자 목록</h3>
         <ul>
           {[...activeUsers].map(user => (
@@ -306,15 +350,17 @@ function ChatRoom() {
       {/* 채팅방 메인 영역 */}
       <div className="chat-room">
         <div className="chat-header">
+          <button className="back-button" onClick={() => navigate(-1)}>
+            <FiArrowLeft /> 뒤로가기
+          </button>
           <h2>채팅방</h2>
           <span className="user-info">{username}</span>
         </div>
         {/* 메시지 표시 영역 */}
-        <div className="chat-messages">
+        <div className="chat-messages" ref={chatMessagesRef}>
           {messages.map((message, index) => (
             <Message key={index} message={message} isMe={message.sender === username} />
           ))}
-          <div ref={messagesEndRef} /> {/* 스크롤 위치를 위한 div 추가 */}
         </div>
         {/* 메시지 입력 폼 */}
         <ChatInputForm 

@@ -1,9 +1,17 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Header.css';
 import webChatLogo from '../assets/logo.png';
 
 const Header = ({ isLoggedIn, setIsLoggedIn }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    localStorage.removeItem('userSession');
+    navigate('/');
+  };
+
   const toggleSession = () => {
     setIsLoggedIn(!isLoggedIn);
     if (!isLoggedIn) {
@@ -25,9 +33,15 @@ const Header = ({ isLoggedIn, setIsLoggedIn }) => {
           </Link>
         </div>
         <nav className="auth-nav">
-          <Link to="/login" className="auth-button">로그인</Link>
+          <Link 
+            to={isLoggedIn ? "/" : "/login"} 
+            className="auth-button"
+            onClick={isLoggedIn ? handleLogout : undefined}
+          >
+            {isLoggedIn ? "로그아웃" : "로그인"}
+          </Link>
           <button 
-            onClick={toggleSession} 
+            onClick={toggleSession}
             className="session-button"
             style={{
               backgroundColor: isLoggedIn ? '#4CAF50' : '#f44336'

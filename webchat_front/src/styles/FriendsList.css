@@ -1,0 +1,116 @@
+.friends-sidebar {
+  width: 250px;
+  background-color: #ffffff;
+  padding: 0;
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.friends-header {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 21px 2rem;
+}
+
+.friends-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.friends-list {
+  padding: 15px 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.friend-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.friend-item:hover {
+  background-color: #f8f9fa;
+}
+
+.friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #ddd;
+  margin-right: 12px;
+}
+
+.friend-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.friend-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.friend-status {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.friend-status.online {
+  color: #28a745;
+}
+
+/* App.css에서 가져온 스타일 */
+.main-container {
+  display: flex;
+  min-height: calc(100vh - 180px);
+  padding: 2px 0;
+}
+
+.content {
+  flex: 1;
+  border-right: 1px solid #eee;
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
+.friend-popup {
+  position: fixed;
+  background-color: white;
+  border-radius: 4px;
+  padding: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 120px;
+}
+
+.chat-button {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+  text-align: center;
+}
+
+.chat-button:hover {
+  background-color: #0056b3;
+} 
