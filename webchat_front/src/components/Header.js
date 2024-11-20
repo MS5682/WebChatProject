@@ -33,6 +33,11 @@ const Header = ({ isLoggedIn, setIsLoggedIn }) => {
           </Link>
         </div>
         <nav className="auth-nav">
+          {isLoggedIn && (
+            <Link to="/friend-requests" className="friend-button">
+              친구 관리
+            </Link>
+          )}
           <Link 
             to={isLoggedIn ? "/" : "/login"} 
             className="auth-button"

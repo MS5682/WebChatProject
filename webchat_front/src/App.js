@@ -9,6 +9,7 @@ import Register from './components/Register';
 import FindId from './components/FindId';
 import FindPassword from './components/FindPassword';
 import FriendsList from './components/FriendsList';
+import FriendRequests from './components/FriendRequests';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -26,6 +27,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/find-id" element={<FindId />} />
               <Route path="/find-password" element={<FindPassword />} />
+              <Route path="/friend-requests" element={<FriendRequests />} />
             </Routes>
           </div>
           <div className="right-sidebar">

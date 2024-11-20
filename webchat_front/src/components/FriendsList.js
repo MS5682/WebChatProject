@@ -73,7 +73,9 @@ function FriendsList() {
   return (
     <div className="friends-sidebar">
       <div className="friends-header">
-        <h3>친구 목록</h3>
+        <button className="header-button" disabled>
+          친구 목록
+        </button>
       </div>
       <div className="friends-list">
         {friends.map(friend => (
