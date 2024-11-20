@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import '../styles/Auth.css';
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    user_id: '',
+    userId: '',
     name: '',
     password: '',
     confirmPassword: '',
@@ -16,6 +16,9 @@ const Register = () => {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [timer, setTimer] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
+  const [isIdChecked, setIsIdChecked] = useState(false);
+  const [idCheckMessage, setIdCheckMessage] = useState('');
+  const [idCheckStatus, setIdCheckStatus] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,6 +42,9 @@ const Register = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'userId') {
+      setIsIdChecked(false);
+    }
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -56,12 +62,13 @@ const Register = () => {
       const params = new URLSearchParams();
       params.append('email', formData.email);
 
-      const response = await fetch('/api/email/send-verification', {
+      const response = await fetch('/email/send-verification', {
         method: 'POST',
         body: params,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-        }
+        },
+        credentials: 'same-origin'
       });
 
       if (!response.ok) {
@@ -90,7 +97,7 @@ const Register = () => {
       params.append('email', formData.email);
       params.append('code', formData.verificationCode);
 
-      const response = await fetch('/api/email/verify', {
+      const response = await fetch('/email/verify', {
         method: 'POST',
         body: params,
         headers: {
@@ -110,9 +117,53 @@ const Register = () => {
     }
   };
 
+  const handleCheckId = async (e) => {
+    e.preventDefault();
+    if (!formData.userId) {
+      setError('아이디를 입력해주세요.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/user/check/${formData.userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('서버 오류가 발생했습니다.');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsIdChecked(true);
+        setIdCheckMessage(data.message);
+        setIdCheckStatus('success');
+        setError('');
+      } else {
+        setIsIdChecked(false);
+        setIdCheckMessage(data.message);
+        setIdCheckStatus('error');
+      }
+    } catch (err) {
+      setIsIdChecked(false);
+      setIdCheckMessage('아이디 중복 확인에 실패했습니다.');
+      setIdCheckStatus('error');
+      console.error('에러 발생:', err);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!isIdChecked) {
+      setError('아이디 중복 확인이 필요합니다.');
+      return;
+    }
 
     if (!isEmailVerified) {
       setError('이메일 인증을 완료해주세요.');
@@ -125,12 +176,26 @@ const Register = () => {
     }
 
     try {
-      console.log('Register attempt:', { 
-        user_id: formData.user_id, 
-        name: formData.name,
-        email: formData.email,
-        password: formData.password 
+      const response = await fetch('/user/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: formData.userId,
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData);
+      }
+
+      // 회원가입 성공
+      alert('회원가입이 완료되었습니다.');
       navigate('/login');
     } catch (err) {
       setError('회원가입에 실패했습니다. 다시 시도해주세요.');
@@ -144,13 +209,27 @@ const Register = () => {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>아이디</label>
-          <input
-            type="text"
-            name="user_id"
-            value={formData.user_id}
-            onChange={handleChange}
-            required
-          />
+          <div className="input-button-group">
+            <input
+              type="text"
+              name="userId"
+              value={formData.userId}
+              onChange={handleChange}
+              required
+            />
+            <button 
+              type="button"
+              onClick={handleCheckId}
+              className={isIdChecked ? 'checked' : ''}
+            >
+              {isIdChecked ? '확인완료' : '중복확인'}
+            </button>
+          </div>
+          {idCheckMessage && (
+            <small className={`id-check-message ${idCheckStatus}`}>
+              {idCheckMessage}
+            </small>
+          )}
         </div>
         <div className="form-group">
           <label>이름</label>
@@ -228,7 +307,7 @@ const Register = () => {
         <button type="submit">회원가입</button>
       </form>
       <p className="auth-link">
-        이미 계정이 있으신가요? <a href="/login">로그인</a>
+        이미 계정이 있으신가요? <Link to="/login">로그인</Link>
       </p>
     </div>
   );

@@ -189,4 +189,36 @@ input:disabled {
 button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
+}
+
+.input-button-group button.checked {
+  background-color: #28a745;
+}
+
+.input-button-group button.checked:hover {
+  background-color: #218838;
+}
+
+.id-check-message {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.9rem;
+}
+
+.id-check-message.success {
+  color: #007bff;  /* 파란색 */
+}
+
+.id-check-message.error {
+  color: #dc3545;  /* 빨간색 */
+}
+
+/* 기존 input-button-group 스타일은 유지 */
+.input-button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.input-button-group button.checked {
+  background-color: #28a745;
 } 
