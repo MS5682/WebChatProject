@@ -9,6 +9,9 @@ import com.sms.webchat.enums.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @SpringBootTest
 public class EntityTest {
 
@@ -146,5 +149,33 @@ public class EntityTest {
         assertThat(savedFriendship.getFromUser().getUserId()).isEqualTo("user1");
         assertThat(savedFriendship.getToUser().getUserId()).isEqualTo("user2");
         assertThat(savedFriendship.getStatus()).isEqualTo(FriendshipStatus.PENDING);
+    }
+
+    @Test
+    void createMultipleUsersTest() {
+        List<User> savedUsers = new ArrayList<>();
+        
+        for (int i = 1; i <= 50; i++) {
+            User user = User.builder()
+                    .userId("user" + i)
+                    .name("유저" + i)
+                    .email("user" + i + "@test.com")
+                    .password("password" + i)
+                    .build();
+            
+            savedUsers.add(userRepository.save(user));
+        }
+
+        // 저장된 유저 수 확인
+        assertThat(savedUsers).hasSize(50);
+        
+        // 몇 개의 유저 데이터 확인
+        assertThat(savedUsers.get(0).getUserId()).isEqualTo("user1");
+        assertThat(savedUsers.get(0).getName()).isEqualTo("유저1");
+        assertThat(savedUsers.get(0).getEmail()).isEqualTo("user1@test.com");
+        
+        assertThat(savedUsers.get(49).getUserId()).isEqualTo("user50");
+        assertThat(savedUsers.get(49).getName()).isEqualTo("유저50");
+        assertThat(savedUsers.get(49).getEmail()).isEqualTo("user50@test.com");
     }
 }

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import '../styles/FriendRequests.css';
 
 function FriendRequests() {
-  const [activeTab, setActiveTab] = useState('received');
+  const [activeTab, setActiveTab] = useState('friends');
   const [receivedRequests, setReceivedRequests] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
+  const [friends, setFriends] = useState([]);
 
   useEffect(() => {
     // 임시 데이터로 테스트
@@ -16,6 +17,14 @@ function FriendRequests() {
     setSentRequests([
       { id: 3, username: '박지성', timestamp: new Date(), status: 'pending' },
       { id: 4, username: '손흥민', timestamp: new Date(), status: 'pending' }
+    ]);
+
+    // 친구 목록 임시 데이터
+    setFriends([
+      { id: 5, username: '강감찬', status: 'offline' },
+      { id: 6, username: '이순신', status: 'online' },
+      { id: 7, username: '세종대왕', status: 'offline' },
+      { id: 8, username: '장영실', status: 'online' }
     ]);
   }, []);
 
@@ -46,8 +55,57 @@ function FriendRequests() {
     }
   };
 
+  const handleDeleteFriend = (friendId) => {
+    // API 호출 로직 추가 예정
+    setFriends(prev => prev.filter(friend => friend.id !== friendId));
+  };
+
+  const handleBlockFriend = (friendId) => {
+    // API 호출 로직 추가 예정
+    setFriends(prev => prev.filter(friend => friend.id !== friendId));
+  };
+
   const renderContent = () => {
     switch (activeTab) {
+      case 'friends':
+        return (
+          <div className="friends-list">
+            {friends.length === 0 ? (
+              <p className="no-friends">친구 목록이 비어있습니다.</p>
+            ) : (
+              <ul>
+                {friends.map(friend => (
+                  <li key={friend.id} className="friend-item">
+                    <div className="friend-info">
+                      <div className="friend-avatar"></div>
+                      <div className="friend-details">
+                        <span className="username">{friend.username}</span>
+                        <span className={`status ${friend.status}`}>
+                          {friend.status === 'online' ? '온라인' : '오프라인'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="friend-actions">
+                      <button className="chat-btn">1:1 채팅</button>
+                      <button 
+                        className="delete-btn"
+                        onClick={() => handleDeleteFriend(friend.id)}
+                      >
+                        삭제
+                      </button>
+                      <button 
+                        className="block-btn"
+                        onClick={() => handleBlockFriend(friend.id)}
+                      >
+                        차단
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
       case 'received':
         return (
           <div className="requests-list">
@@ -121,6 +179,12 @@ function FriendRequests() {
   return (
     <div className="friend-requests-container">
       <div className="tabs">
+        <button
+          className={`tab ${activeTab === 'friends' ? 'active' : ''}`}
+          onClick={() => setActiveTab('friends')}
+        >
+          친구 목록
+        </button>
         <button
           className={`tab ${activeTab === 'received' ? 'active' : ''}`}
           onClick={() => setActiveTab('received')}

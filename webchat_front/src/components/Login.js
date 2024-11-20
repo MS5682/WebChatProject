@@ -4,7 +4,7 @@ import '../styles/Auth.css';
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    username: '',
+    user_id: '',
     password: ''
   });
   const [error, setError] = useState('');
@@ -24,7 +24,10 @@ const Login = () => {
     
     try {
       // TODO: 실제 로그인 로직 구현
-      console.log('Login attempt:', formData);
+      console.log('Login attempt:', { 
+        user_id: formData.user_id, 
+        password: formData.password 
+      });
       navigate('/');
     } catch (err) {
       setError('로그인에 실패했습니다. 다시 시도해주세요.');
@@ -39,8 +42,8 @@ const Login = () => {
           <label>아이디:</label>
           <input
             type="text"
-            name="username"
-            value={formData.username}
+            name="user_id"
+            value={formData.user_id}
             onChange={handleChange}
             required
           />
