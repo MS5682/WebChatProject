@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import '../styles/Auth.css';
-import { useUser } from '../contexts/UserContext';
 
 const Login = () => {
-  const { setIsLoggedIn, setUserIdx } = useUser();
   const [formData, setFormData] = useState({
     userId: '',
     password: ''
@@ -22,7 +20,6 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     
     try {
       const response = await fetch('/user/login', {
@@ -33,21 +30,25 @@ const Login = () => {
         body: JSON.stringify({
           userId: formData.userId,
           password: formData.password
-        }),
-        credentials: 'include'
+        })
       });
 
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setIsLoggedIn(true);
-        setUserIdx(data.userIdx);
-        navigate('/');
+      if (response.ok) {
+        const token = response.headers.get('Authorization');
+        console.log('받은 토큰:', token);
+        
+        if (token) {
+          localStorage.setItem('token', token);
+          navigate('/');
+          window.location.reload();
+        } else {
+          throw new Error('토큰이 없습니다.');
+        }
       } else {
-        throw new Error(data.message || '로그인에 실패했습니다.');
+        throw new Error('로그인에 실패했습니다.');
       }
     } catch (err) {
-      setError(err.message || '로그인에 실패했습니다. 다시 시도해주세요.');
+      setError(err.message);
     }
   };
 

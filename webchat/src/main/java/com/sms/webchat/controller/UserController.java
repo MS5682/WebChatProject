@@ -10,8 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import com.sms.webchat.entity.User;
 import com.sms.webchat.service.UserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import jakarta.servlet.http.HttpSession;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
+import com.sms.webchat.security.JwtTokenProvider;
 
 @RestController
 @RequestMapping("/user")
@@ -19,6 +20,7 @@ import java.util.Map;
 public class UserController {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequestDto request) {
@@ -58,43 +60,41 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(
-            @RequestBody LoginRequestDto request,
-            HttpSession session) {
+    public ResponseEntity<?> login(@RequestBody LoginRequestDto request) {
         try {
             // 로그인 처리
             User user = userService.login(request.getUserId(), request.getPassword());
             
-            // 세션에 사용자 정보 저장
-            session.setAttribute("userId", user.getUserId());
-            session.setAttribute("userIdx", user.getIdx());
+            // JWT 토큰 생성
+            String token = jwtTokenProvider.createToken(
+                user.getUserId(),
+                Map.of(
+                    "userIdx", user.getIdx(),
+                    "userId", user.getUserId(),
+                    "name", user.getName(),
+                    "email", user.getEmail()
+                )
+            );
             
-            return ResponseEntity.ok().body(new ApiResponseDto(true, "로그인 성공"));
+            return ResponseEntity.ok()
+                .header("Authorization", token)
+                .body(new ApiResponseDto(true, "로그인 성공"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ApiResponseDto(false, e.getMessage()));
         }
     }
 
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpSession session) {
+    @GetMapping("/check-auth")
+    public ResponseEntity<?> checkAuth(@RequestHeader("Authorization") String token) {
         try {
-            // 세션 무효화
-            session.invalidate();
-            return ResponseEntity.ok().body(new ApiResponseDto(true, "로그아웃 되었습니다."));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponseDto(false, e.getMessage()));
-        }
-    }
-
-    @GetMapping("/check-session")
-    public ResponseEntity<?> checkSession(HttpSession session) {
-        try {
-            // 세션에서 userId 확인
-            String userId = (String) session.getAttribute("userId");
-            boolean isLoggedIn = userId != null;
+            // 토큰 유효성 검증 및 데이터 추출
+            if (jwtTokenProvider.validateToken(token)) {
+                Map<String, Object> claims = jwtTokenProvider.getClaims(token);
+                return ResponseEntity.ok().body(claims);
+            }
             
-            return ResponseEntity.ok()
-                .body(Map.of("isLoggedIn", isLoggedIn));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponseDto(false, "유효하지 않은 토큰입니다."));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                 .body(new ApiResponseDto(false, e.getMessage()));

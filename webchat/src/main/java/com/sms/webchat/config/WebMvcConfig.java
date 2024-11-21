@@ -2,6 +2,7 @@ package com.sms.webchat.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import com.sms.webchat.interceptor.LoginCheckInterceptor;
@@ -19,16 +20,30 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(@NonNull InterceptorRegistry registry) {
         registry.addInterceptor(loginCheckInterceptor)
-                .addPathPatterns("/**")    // 모든 경로에 인터셉터 적용
-                .excludePathPatterns(       // 인터셉터 적용을 제외할 경로 설정
-                    "/user/login",          // 로그인 페이지
-                    "/user/logout",         // 로그아웃 경로 추가
-                    "/user/signup",         // 회원가입 페이지 
-                    "/user/find-id",        // 아이디 찾기 페이지
-                    "/user/changePassword", // 비밀번호 변경 페이지
-                    "/user/check-session",  // 세션 체크 경로 추가
-                    "/email/**",            // 이메일 관련 경로
-                    "/ws/**"                // WebSocket 관련 경로
-                );
+        .addPathPatterns("/**")    // 모든 경로에 인터셉터 적용
+        .excludePathPatterns(       // 인터셉터 적용을 제외할 경로 설정
+            "/user/login",          // 로그인 페이지
+            "/user/logout",         // 로그아웃 경로 추가
+            "/user/signup",         // 회원가입 페이지 
+            "/user/find-id",        // 아이디 찾기 페이지
+            "/user/changePassword", // 비밀번호 변경 페이지
+            "/user/check-session",  // 세션 체크 경로 추가
+            "/user/check-auth",    // 추가
+            "/email/**",            // 이메일 관련 경로
+            "/ws/**"                // WebSocket 관련 경로
+        );
+
+    }
+
+     
+    @Override
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:3000")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .exposedHeaders("Authorization")  // JWT 토큰 헤더 노출
+                .allowCredentials(true)
+                .maxAge(3600);
     }
 } 

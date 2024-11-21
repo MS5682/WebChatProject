@@ -1,26 +1,33 @@
 package com.sms.webchat.interceptor;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.lang.NonNull;
+
+import com.sms.webchat.security.JwtTokenProvider;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+import org.springframework.lang.NonNull;
 
 @Component
 public class LoginCheckInterceptor implements HandlerInterceptor {
+    
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
     
     @Override
     public boolean preHandle(@NonNull HttpServletRequest request, 
                            @NonNull HttpServletResponse response, 
                            @NonNull Object handler) {
-        HttpSession session = request.getSession(false);
+        String token = request.getHeader("Authorization");
         
-        if (session == null || session.getAttribute("userId") == null) {
-            throw new RuntimeException("로그인이 필요합니다.");
+        if (token != null) {
+            if (jwtTokenProvider.validateToken(token)) {
+                return true;
+            }
         }
         
-        return true;
+        throw new RuntimeException("로그인이 필요합니다.");
     }
 } 

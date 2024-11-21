@@ -3,22 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Header.css';
 import webChatLogo from '../assets/logo.png';
 
-const Header = ({ isLoggedIn, setIsLoggedIn }) => {
+const Header = ({ isLoggedIn, userInfo, onLogout }) => {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    localStorage.removeItem('userSession');
+  const handleLogoutClick = () => {
+    onLogout();
     navigate('/');
-  };
-
-  const toggleSession = () => {
-    setIsLoggedIn(!isLoggedIn);
-    if (!isLoggedIn) {
-      localStorage.setItem('userSession', 'dummy-session');
-    } else {
-      localStorage.removeItem('userSession');
-    }
   };
 
   return (
@@ -34,26 +24,26 @@ const Header = ({ isLoggedIn, setIsLoggedIn }) => {
         </div>
         <nav className="auth-nav">
           {isLoggedIn && (
-            <Link to="/friend-requests" className="friend-button">
-              친구 관리
+            <>
+              <div className="user-info">
+                <span>{userInfo.name}</span>
+                <span>({userInfo.userId})</span>
+                <span>{userInfo.email}</span>
+              </div>
+              <Link to="/friend-requests" className="friend-button">
+                친구 관리
+              </Link>
+            </>
+          )}
+          {isLoggedIn ? (
+            <button onClick={handleLogoutClick} className="auth-button">
+              로그아웃
+            </button>
+          ) : (
+            <Link to="/login" className="auth-button">
+              로그인
             </Link>
           )}
-          <Link 
-            to={isLoggedIn ? "/" : "/login"} 
-            className="auth-button"
-            onClick={isLoggedIn ? handleLogout : undefined}
-          >
-            {isLoggedIn ? "로그아웃" : "로그인"}
-          </Link>
-          <button 
-            onClick={toggleSession}
-            className="session-button"
-            style={{
-              backgroundColor: isLoggedIn ? '#4CAF50' : '#f44336'
-            }}
-          >
-            세션 {isLoggedIn ? '있음' : '없음'}
-          </button>
         </nav>
       </header>
     </>
