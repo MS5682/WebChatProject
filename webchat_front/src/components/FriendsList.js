@@ -4,114 +4,84 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/FriendsList.css';
 
 function FriendsList() {
-  const [onlineUsers, setOnlineUsers] = useState(new Set());
-  const [friends, setFriends] = useState([
-    { id: 1, name: "홍길동" },
-    { id: 2, name: "김철수" },
-    // ... 더미 데이터
-  ]);
-  const [selectedFriend, setSelectedFriend] = useState(null);
-  const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const client = new Client({
-      brokerURL: 'ws://localhost:8080/ws',
-      onConnect: () => {
-        console.log('Connected to WebSocket');
-        
-        // 사용자 상태 구독
-        client.subscribe('/topic/status', (message) => {
-          const status = JSON.parse(message.body);
-          setOnlineUsers(prevUsers => {
-            const newUsers = new Set(prevUsers);
-            if (status.status === 'ONLINE') {
-              newUsers.add(status.userId);
-            } else {
-              newUsers.delete(status.userId);
-            }
-            return newUsers;
-          });
-        });
-
-        // 자신의 접속 상태 서버에 알림
-        client.publish({
-          destination: '/app/status',
-          body: JSON.stringify({ status: 'ONLINE' })
-        });
+  const [activeTab, setActiveTab] = useState('online');
+  const [friends, setFriends] = useState({
+    online: [
+      {
+        id: 1,
+        name: '김철수',
+        status: '온라인',
+        lastMessage: '네, 알겠습니다. 내일 회의때 뵐게요!'
+      },
+      {
+        id: 2,
+        name: '이영희',
+        status: '온라인',
+        lastMessage: '프로젝트 자료 보내드렸습니다.'
       }
-    });
-
-    client.activate();
-
-    return () => {
-      if (client.connected) {
-        // 연결 종료 시 오프라인 상태 알림
-        client.publish({
-          destination: '/app/status',
-          body: JSON.stringify({ status: 'OFFLINE' })
-        });
-        client.deactivate();
+    ],
+    offline: [
+      {
+        id: 3,
+        name: '박지성',
+        status: '오프라인',
+        lastMessage: '다음 주에 일정 조율해보겠습니다.'
+      },
+      {
+        id: 4,
+        name: '최민수',
+        status: '오프라인',
+        lastMessage: '확인했습니다. 감사합니다.'
       }
-    };
-  }, []);
+    ]
+  });
 
-  const handleFriendClick = (friend, e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setPopupPosition({
-      top: rect.top,
-      left: rect.left - 140
-    });
-    setSelectedFriend(friend);
-  };
-
-  const startChat = () => {
-    navigate(`/chat/dm/${selectedFriend.id}`);
-    setSelectedFriend(null);
+  const truncateMessage = (message) => {
+    return message.length > 15 ? message.slice(0, 15) + '...' : message;
   };
 
   return (
-    <div className="friends-sidebar">
+    <div className="friends-list">
       <div className="friends-header">
-        <button className="header-button" disabled>
-          친구 목록
+        <h2>친구 목록</h2>
+      </div>
+
+      <div className="friends-tabs">
+        <button
+          className={`friend-tab ${activeTab === 'online' ? 'active' : ''}`}
+          onClick={() => setActiveTab('online')}
+        >
+          온라인
+        </button>
+        <button
+          className={`friend-tab ${activeTab === 'offline' ? 'active' : ''}`}
+          onClick={() => setActiveTab('offline')}
+        >
+          오프라인
         </button>
       </div>
-      <div className="friends-list">
-        {friends.map(friend => (
-          <div 
-            key={friend.id} 
-            className="friend-item"
-            onClick={(e) => handleFriendClick(friend, e)}
-          >
-            <div className="friend-avatar"></div>
+
+      <div className="friends-container">
+        {friends[activeTab].map(friend => (
+          <div key={friend.id} className="friend-card">
             <div className="friend-info">
-              <span className="friend-name">{friend.name}</span>
-              <span className={`friend-status ${onlineUsers.has(friend.id) ? 'online' : ''}`}>
-                {onlineUsers.has(friend.id) ? '온라인' : '오프라인'}
-              </span>
+              <div className="friend-avatar">
+                <div className={`status-indicator ${friend.status === '온라인' ? 'online' : 'offline'}`}></div>
+                {friend.name.charAt(0)}
+              </div>
+              <div className="friend-details">
+                <h3>{friend.name}</h3>
+                <p className="last-message">{truncateMessage(friend.lastMessage)}</p>
+              </div>
+            </div>
+            <div className="friend-actions">
+              <button className="chat-button">
+                💬 채팅
+              </button>
             </div>
           </div>
         ))}
       </div>
-
-      {/* 친구 선택 시 나타나는 팝업 */}
-      {selectedFriend && (
-        <>
-          <div className="popup-overlay" onClick={() => setSelectedFriend(null)} />
-          <div 
-            className="friend-popup"
-            style={{
-              top: `${popupPosition.top}px`,
-              left: `${popupPosition.left}px`
-            }}
-          >
-            <button className="chat-button" onClick={startChat}>
-              1:1 채팅하기
-            </button>
-          </div>
-        </>
-      )}
     </div>
   );
 }

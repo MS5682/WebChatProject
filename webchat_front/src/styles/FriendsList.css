@@ -1,127 +1,177 @@
-.friends-sidebar {
-  width: 250px;
-  background-color: #ffffff;
-  padding: 0;
-  position: relative;
+.friends-list {
   height: 100%;
-  display: flex;
-  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px 0;
 }
 
 .friends-header {
-    display: flex;
-    gap: 1rem;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 1rem 2rem;
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 10px 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e9ecef;
 }
 
-.header-button {
-  padding: 0.75rem 1.5rem;
+.friends-header h2 {
+  font-size: 20px;
+  color: #343a40;
+  margin: 0;
+}
+
+.friends-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 10px;
+}
+
+.friend-tab {
+  padding: 8px 16px;
   border: none;
-  border-radius: 8px;
-  background-color: #007bff;
-  font-size: 1rem;
-  width: 100%;
-  cursor: default;
+  border-radius: 20px;
+  background-color: #f1f3f5;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
 }
 
-.friends-list {
-  padding: 15px 20px;
-  flex: 1;
-  overflow-y: auto;
+.friend-tab.active {
+  background-color: #4CAF50;
+  color: white;
 }
 
-.friend-item {
+.friend-tab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.friends-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.friend-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  height: 70px;
+}
+
+.friend-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.friend-info {
   display: flex;
   align-items: center;
-  padding: 10px 0;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.friend-item:hover {
-  background-color: #f8f9fa;
+  gap: 12px;
+  width: calc(100% - 80px);
 }
 
 .friend-avatar {
   width: 40px;
   height: 40px;
+  min-width: 40px;
+  background: #e9ecef;
   border-radius: 50%;
-  background-color: #ddd;
-  margin-right: 12px;
-}
-
-.friend-info {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #495057;
+  position: relative;
 }
 
-.friend-name {
-  font-weight: 500;
-  color: #333;
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
 }
 
-.friend-status {
-  font-size: 0.8rem;
-  color: #666;
+.status-indicator.online {
+  background-color: #51cf66;
 }
 
-.friend-status.online {
-  color: #28a745;
+.status-indicator.offline {
+  background-color: #868e96;
 }
 
-/* App.css에서 가져온 스타일 */
-.main-container {
-  display: flex;
-  min-height: calc(100vh - 180px);
-  padding: 2px 0;
+.friend-details {
+  width: calc(100% - 52px);
+  overflow: hidden;
 }
 
-.content {
-  flex: 1;
-  border-right: 1px solid #eee;
+.friend-details h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #343a40;
+  margin-bottom: 4px;
 }
 
-.popup-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 999;
+.last-message {
+  margin: 0;
+  font-size: 13px;
+  color: #6c757d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
 }
 
-.friend-popup {
-  position: fixed;
-  background-color: white;
-  border-radius: 4px;
-  padding: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  min-width: 120px;
+.friend-actions {
+  width: 70px;
+  min-width: 70px;
+}
+
+.last-seen {
+  font-size: 12px;
+  color: #adb5bd;
 }
 
 .chat-button {
-  width: 100%;
-  padding: 8px 12px;
-  background-color: #007bff;
-  color: white;
+  padding: 6px 12px;
   border: none;
-  border-radius: 4px;
+  border-radius: 16px;
+  background-color: #4CAF50;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-  text-align: center;
+  transition: all 0.3s ease;
+  width: 100%;
+  white-space: nowrap;
 }
 
 .chat-button:hover {
-  background-color: #0056b3;
+  background-color: #45a049;
+  transform: translateY(-2px);
 }
 
-.friends-header .header-button:disabled {
-  background: none;
-  opacity: 1;
-  cursor: default;
-  color: #040404;
-  font-weight: bold;
+/* 애니메이션 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.friend-card {
+  animation: slideIn 0.3s ease-out;
 }
