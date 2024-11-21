@@ -9,12 +9,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import lombok.RequiredArgsConstructor;
 import com.sms.webchat.service.EmailVerificationService;
+import com.sms.webchat.service.UserService;
 
 @RestController
 @RequestMapping("/email")
 @RequiredArgsConstructor
 public class EmailController {
     private final EmailVerificationService emailVerificationService;
+    private final UserService userService;
     private final Logger logger = LoggerFactory.getLogger(EmailController.class);
 
 
@@ -38,4 +40,25 @@ public class EmailController {
         }
         return ResponseEntity.badRequest().body("잘못된 인증 코드이거나 만료되었습니다.");
     }
+
+    @PostMapping("/find-id/send-email")
+    public ResponseEntity<?> sendFindIdEmail(@RequestParam String email) {
+        try {
+            userService.sendFindIdVerificationEmail(email);
+            return ResponseEntity.ok("인증 메일이 발송되었습니다.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/find-id/verify")
+    public ResponseEntity<?> findUserId(@RequestParam String email, @RequestParam String code) {
+        try {
+            String userId = userService.findUserIdByEmailVerification(email, code);
+            return ResponseEntity.ok(userId);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 } 

@@ -1,5 +1,6 @@
 package com.sms.webchat.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 public class UserService {
     private final UserRepository userRepository;
+    @Autowired
+    private EmailVerificationService emailVerificationService;
 
     public void signup(User user) {
         // 아이디 중복 체크
@@ -30,5 +33,27 @@ public class UserService {
 
     public boolean checkUserIdDuplicate(String userId) {
         return userRepository.existsByUserId(userId);
+    }
+
+    public void sendFindIdVerificationEmail(String email) {
+        // 이메일 존재 여부 확인
+        if (!userRepository.existsByEmail(email)) {
+            throw new RuntimeException("등록되지 않은 이메일입니다.");
+        }
+        
+        // 아이디 찾기용 인증 메일 발송
+        emailVerificationService.sendFindIdVerificationEmail(email);
+    }
+
+    public String findUserIdByEmailVerification(String email, String code) {
+        // 인증 코드 확인
+        if (!emailVerificationService.verifyFindIdEmail(email, code)) {
+            throw new RuntimeException("인증번호가 일치하지 않습니다.");
+        }
+
+        // 인증 성공 시 아이디 반환
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        return user.getUserId();
     }
 } 

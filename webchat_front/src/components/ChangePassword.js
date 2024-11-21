@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/Auth.css';
 
-const FindPassword = () => {
+const ChangePassword = () => {
   const [formData, setFormData] = useState({
     username: '',
     email: ''
@@ -36,10 +36,10 @@ const FindPassword = () => {
 
   return (
     <div className="auth-container">
-      <h2>비밀번호 찾기</h2>
+      <h2>비밀번호 변경</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>아이디:</label>
+          <label>아이디</label>
           <input
             type="text"
             name="username"
@@ -50,7 +50,7 @@ const FindPassword = () => {
           />
         </div>
         <div className="form-group">
-          <label>이메일:</label>
+          <label>이메일</label>
           <input
             type="email"
             name="email"
@@ -68,4 +68,4 @@ const FindPassword = () => {
   );
 };
 
-export default FindPassword; 
+export default ChangePassword; 

@@ -7,7 +7,7 @@ import ChatRoom from './components/ChatRoom';
 import Login from './components/Login';
 import Register from './components/Register';
 import FindId from './components/FindId';
-import FindPassword from './components/FindPassword';
+import ChangePassword from './components/ChangePassword';
 import FriendsList from './components/FriendsList';
 import FriendRequests from './components/FriendRequests';
 
@@ -26,7 +26,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/find-id" element={<FindId />} />
-              <Route path="/find-password" element={<FindPassword />} />
+              <Route path="/change-password" element={<ChangePassword />} />
               <Route path="/friend-requests" element={<FriendRequests />} />
             </Routes>
           </div>

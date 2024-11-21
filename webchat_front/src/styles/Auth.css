@@ -221,4 +221,20 @@ button:disabled {
 
 .input-button-group button.checked {
   background-color: #28a745;
+}
+
+button.disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.success-message {
+  color: #28a745;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 0.9rem;
 } 

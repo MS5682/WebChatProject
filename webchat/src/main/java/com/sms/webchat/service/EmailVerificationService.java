@@ -65,7 +65,39 @@ public class EmailVerificationService {
     }
     
     private boolean isEmailExists(String email) {
-        // UserRepository의 existsByEmail 메서드 사용
         return userRepository.existsByEmail(email);
+    }
+    
+    // 아이디 찾기용 이메일 발송
+    public void sendFindIdVerificationEmail(String email) {
+        String code = generateVerificationCode();
+        String key = "FindIdVerification:" + email;  // 회원가입과 구분하기 위한 다른 키 사용
+        
+        // Redis에 저장 (5분 후 자동 삭제)
+        redisTemplate.opsForValue().set(key, code);
+        redisTemplate.expire(key, 5, TimeUnit.MINUTES);
+        
+        // 이메일 발송
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(email);
+            helper.setSubject("[아이디 찾기] 이메일 인증");
+            helper.setText("아이디 찾기 인증 코드: " + code);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("이메일 전송 실패", e);
+        }
+    }
+    
+    public boolean verifyFindIdEmail(String email, String code) {
+        String key = "FindIdVerification:" + email;
+        String savedCode = redisTemplate.opsForValue().get(key);
+        
+        if (savedCode != null && savedCode.equals(code)) {
+            redisTemplate.delete(key);
+            return true;
+        }
+        return false;
     }
 } 

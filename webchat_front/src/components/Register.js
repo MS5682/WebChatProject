@@ -73,6 +73,11 @@ const Register = () => {
 
       if (!response.ok) {
         const errorMessage = await response.text();
+        // 이메일 발송 실패 에러 메시지 확인
+        if (errorMessage.includes('SendFailedException') || 
+            errorMessage.includes('Invalid Addresses')) {
+          throw new Error('존재하지 않는 이메일입니다.');
+        }
         throw new Error(errorMessage);
       }
 
@@ -280,30 +285,34 @@ const Register = () => {
             </button>
           </div>
         </div>
-        <div className="form-group">
-          <label>인증코드</label>
-          <div className="input-button-group">
-            <input
-              type="text"
-              name="verificationCode"
-              value={formData.verificationCode}
-              onChange={handleChange}
-              required
-            />
-            <button 
-              type="button" 
-              onClick={handleVerifyCode}
-              disabled={isEmailVerified || !isEmailSent}
-            >
-              {isEmailVerified ? '인증완료' : '인증하기'}
-            </button>
+        
+        {isEmailSent && (
+          <div className="form-group">
+            <label>인증코드</label>
+            <div className="input-button-group">
+              <input
+                type="text"
+                name="verificationCode"
+                value={formData.verificationCode}
+                onChange={handleChange}
+                required
+              />
+              <button 
+                type="button" 
+                onClick={handleVerifyCode}
+                disabled={isEmailVerified}
+              >
+                {isEmailVerified ? '인증완료' : '인증하기'}
+              </button>
+            </div>
+            {!isEmailVerified && timerActive && (
+              <small className="timer-text">
+                남은 시간: {formatTime(timer)}
+              </small>
+            )}
           </div>
-          {isEmailSent && !isEmailVerified && (
-            <small className="timer-text">
-              남은 시간: {formatTime(timer)}
-            </small>
-          )}
-        </div>
+        )}
+
         <button type="submit">회원가입</button>
       </form>
       <p className="auth-link">

@@ -39,7 +39,7 @@ const Login = () => {
       <h2>로그인</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>아이디:</label>
+          <label>아이디</label>
           <input
             type="text"
             name="userId"
@@ -49,7 +49,7 @@ const Login = () => {
           />
         </div>
         <div className="form-group">
-          <label>비밀번호:</label>
+          <label>비밀번호</label>
           <input
             type="password"
             name="password"
@@ -65,7 +65,7 @@ const Login = () => {
       <div className="auth-links">
         <Link to="/find-id">아이디 찾기</Link>
         <span className="divider">|</span>
-        <Link to="/find-password">비밀번호 찾기</Link>
+        <Link to="/change-password">비밀번호 변경</Link>
         <span className="divider">|</span>
         <Link to="/register">회원가입</Link>
       </div>
