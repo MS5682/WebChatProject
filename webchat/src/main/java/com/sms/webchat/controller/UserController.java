@@ -1,5 +1,6 @@
 package com.sms.webchat.controller;
 
+import com.sms.webchat.dto.request.ChangePasswordRequest;
 import com.sms.webchat.dto.request.SignupRequestDto;
 import com.sms.webchat.dto.response.ApiResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,17 @@ public class UserController {
                 isDuplicate ? "이미 사용중인 아이디입니다." : "사용 가능한 아이디입니다."));
         } catch (Exception e) {
             System.out.println("에러 발생: " + e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponseDto(false, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/changePassword")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
+        try {
+            String encodedPassword = passwordEncoder.encode(request.getPassword());
+            userService.updatePassword(request.getEmail(), encodedPassword);
+            return ResponseEntity.ok().body(new ApiResponseDto(true, "비밀번호가 성공적으로 변경되었습니다."));
+        } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ApiResponseDto(false, e.getMessage()));
         }
     }

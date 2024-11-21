@@ -100,4 +100,36 @@ public class EmailVerificationService {
         }
         return false;
     }
+    
+    public void sendChangePasswordVerificationEmail(String email) {
+        String code = generateVerificationCode();
+        String key = "ChangePasswordVerification:" + email;
+        
+        // Redis에 저장 (5분 후 자동 삭제)
+        redisTemplate.opsForValue().set(key, code);
+        redisTemplate.expire(key, 5, TimeUnit.MINUTES);
+        
+        // 이메일 발송
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(email);
+            helper.setSubject("[비밀번호 변경] 이메일 인증");
+            helper.setText("비밀번호 변경 인증 코드: " + code);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("이메일 전송 실패", e);
+        }
+    }
+    
+    public boolean verifyChangePasswordEmail(String email, String code) {
+        String key = "ChangePasswordVerification:" + email;
+        String savedCode = redisTemplate.opsForValue().get(key);
+        
+        if (savedCode != null && savedCode.equals(code)) {
+            redisTemplate.delete(key);
+            return true;
+        }
+        return false;
+    }
 } 

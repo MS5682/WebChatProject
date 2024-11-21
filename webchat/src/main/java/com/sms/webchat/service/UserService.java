@@ -56,4 +56,16 @@ public class UserService {
             .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
         return user.getUserId();
     }
+
+    public boolean validateUserEmailAndId(String email, String userId) {
+        return userRepository.findByEmailAndUserId(email, userId).isPresent();
+    }
+
+    @Transactional
+    public void updatePassword(String email, String encodedPassword) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+    }
 } 
