@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import '../styles/Auth.css';
+import { useUser } from '../contexts/UserContext';
 
 const Login = () => {
+  const { setIsLoggedIn, setUserIdx } = useUser();
   const [formData, setFormData] = useState({
     userId: '',
     password: ''
@@ -23,14 +25,29 @@ const Login = () => {
     setError('');
     
     try {
-      // TODO: 실제 로그인 로직 구현
-      console.log('Login attempt:', { 
-        userId: formData.userId, 
-        password: formData.password 
+      const response = await fetch('/user/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: formData.userId,
+          password: formData.password
+        }),
+        credentials: 'include'
       });
-      navigate('/');
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setIsLoggedIn(true);
+        setUserIdx(data.userIdx);
+        navigate('/');
+      } else {
+        throw new Error(data.message || '로그인에 실패했습니다.');
+      }
     } catch (err) {
-      setError('로그인에 실패했습니다. 다시 시도해주세요.');
+      setError(err.message || '로그인에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
