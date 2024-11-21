@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Header.css';
-import webChatLogo from '../assets/logo.png';
 
 const Header = ({ isLoggedIn, userInfo, onLogout }) => {
   const navigate = useNavigate();
@@ -18,17 +17,19 @@ const Header = ({ isLoggedIn, userInfo, onLogout }) => {
       </div>
       <header className="header">
         <div className="logo">
-          <Link to="/">
-            <img src={webChatLogo} alt="WebChat" className="logo-image" />
+          <Link to="/" className="logo-text">
+            Web<span>Chat</span>
           </Link>
         </div>
         <nav className="auth-nav">
           {isLoggedIn && (
             <>
               <div className="user-info">
-                <span>{userInfo.name}</span>
-                <span>({userInfo.userId})</span>
-                <span>{userInfo.email}</span>
+                <span className="name">{userInfo.name}</span>
+                <div className="divider"></div>
+                <span className="userId">{userInfo.userId}</span>
+                <div className="divider"></div>
+                <span className="email">{userInfo.email}</span>
               </div>
               <Link to="/friend-requests" className="friend-button">
                 친구 관리

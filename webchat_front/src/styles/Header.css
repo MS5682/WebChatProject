@@ -83,23 +83,29 @@ button.auth-button:hover {
 }
 
 .logo {
-  padding: 8px 16px;
-}
-
-.logo-image {
-  height: 60px;
-  width: auto;
-  vertical-align: middle;
-}
-
-.logo a {
-  text-decoration: none;
   display: flex;
   align-items: center;
 }
 
-.logo:hover {
-  background-color: #0056b3;
+.logo-text {
+  font-size: 28px;
+  font-weight: 800;
+  text-decoration: none;
+  background: linear-gradient(45deg, #2196F3, #4CAF50);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: -1px;
+}
+
+.logo-text span {
+  color: #4CAF50;
+}
+
+.logo-text:hover {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
 }
 
 .friend-button {
