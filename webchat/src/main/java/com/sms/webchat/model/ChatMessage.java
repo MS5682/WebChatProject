@@ -17,11 +17,20 @@ public class ChatMessage {
     private MessageType type;
     private String time;
     private List<String> users;
+    private String roomId;
 
     public enum MessageType {
         CHAT, JOIN, LEAVE, ACTIVE_USERS
     }
 
     public ChatMessage() {
+    }
+
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
+    }
+
+    public String getRoomId() {
+        return roomId;
     }
 } 

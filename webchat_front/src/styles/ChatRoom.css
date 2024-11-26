@@ -7,67 +7,138 @@
 
 .user-list {
   width: 200px;
-  background-color: white;
-  border-right: 1px solid #eee;
-  padding: 20px;
+  border-right: 1px solid #e6e6e6;
+  background: #f8f9fa;
+  height: 100%;
+  padding: 20px 0;
   position: relative;
-  resize: horizontal;
-  overflow: auto;
   min-width: 150px;
   max-width: 400px;
+  transition: width 0.1s ease;
 }
 
 .user-list h3 {
-  color: #333;
-  margin-bottom: 15px;
+  padding: 0 20px 15px;
+  margin: 0;
+  color: #2c3e50;
   font-size: 1rem;
+  border-bottom: 1px solid #e6e6e6;
 }
 
 .user-list ul {
   list-style: none;
-  padding: 0;
+  padding: 10px 0;
   margin: 0;
 }
 
 .user-list li {
-  padding: 8px 12px;
-  border-bottom: 1px solid #eee;
+  padding: 12px 20px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  position: relative;
+  gap: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-.status-indicator {
-  width: 8px;
-  height: 8px;
+.user-list li:hover {
+  background: #edf2f7;
+}
+
+.user-list .status-indicator {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background-color: #ccc;
+  position: relative;
   flex-shrink: 0;
-  position: static;
-  display: inline-block;
 }
 
 .user-list li.online .status-indicator {
   background-color: #2ecc71;
-  box-shadow: 0 0 4px rgba(46, 204, 113, 0.5);
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2);
+}
+
+.user-list li.online .status-indicator::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(46, 204, 113, 0.1);
+  top: -2px;
+  left: -2px;
+  animation: pulse 2s infinite;
 }
 
 .user-list li.offline .status-indicator {
   background-color: #95a5a6;
+  box-shadow: 0 0 0 2px rgba(149, 165, 166, 0.2);
 }
 
 .participant-name {
   flex-grow: 1;
   display: flex;
   align-items: center;
-  height: 20px;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: #34495e;
+}
+
+.participant-name small {
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.user-list li.online .participant-name small {
+  color: #27ae60;
+  background: rgba(46, 204, 113, 0.1);
+}
+
+.user-list li.offline .participant-name small {
+  color: #7f8c8d;
+  background: rgba(149, 165, 166, 0.1);
 }
 
 .user-list li.current-user {
-  background-color: #f8f9fa;
-  font-weight: 500;
+  background: #e8f5e9;
+}
+
+.user-list li.current-user:hover {
+  background: #c8e6c9;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 스크롤바 스타일링 */
+.user-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.user-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.user-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.user-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .chat-room {
@@ -333,17 +404,21 @@
 /* 리사이즈 핸들 스타일 */
 .resize-handle {
   position: absolute;
-  right: 0;
+  right: -5px;
   top: 0;
   bottom: 0;
   width: 10px;
-  background-color: transparent;
   cursor: col-resize;
-  transition: background-color 0.2s;
+  background: transparent;
+  transition: background 0.2s;
 }
 
 .resize-handle:hover {
-  background-color: #007bff;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.resize-handle:active {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .chat-messages > :first-child {

@@ -34,11 +34,10 @@ function useChatRoom(userInfo) {
       }
       const data = await response.json();
       setParticipants(data);
-      connectWebSocket(userInfo.name);
     } catch (error) {
       console.error('참여자 목록 조회 오류:', error);
     }
-  }, [roomId, userInfo.name]);
+  }, [roomId]);
 
   const connectWebSocket = useCallback((user) => {
     const client = new Client({
@@ -47,6 +46,9 @@ function useChatRoom(userInfo) {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
+        console.log('WebSocket 연결 성공');
+        setIsConnected(true);
+        
         client.subscribe('/topic/status', (message) => {
           try {
             const statusUpdate = JSON.parse(message.body);
@@ -93,6 +95,7 @@ function useChatRoom(userInfo) {
         });
       },
       onDisconnect: () => {
+        console.log('WebSocket 연결 해제');
         setIsConnected(false);
       },
       onStompError: (frame) => {
@@ -120,7 +123,7 @@ function useChatRoom(userInfo) {
   }, [roomId, fetchParticipants]);
 
   const handleMessageSubmit = useCallback(async (message, file) => {
-    if (!isConnected || !clientRef.current?.connected) {
+    if (!clientRef.current?.connected) {
       console.error('WebSocket이 연결되어 있지 않습니다.');
       return;
     }
@@ -134,6 +137,7 @@ function useChatRoom(userInfo) {
         time: new Date().toISOString()
       };
 
+      console.log('메시지 전송 시도:', messageData);
       clientRef.current.publish({
         destination: `/app/chat.room/${roomId}/send`,
         body: JSON.stringify(messageData)
@@ -141,7 +145,7 @@ function useChatRoom(userInfo) {
     } catch (error) {
       console.error('메시지 전송 중 오류:', error);
     }
-  }, [isConnected, userInfo.name, roomId]);
+  }, [userInfo.name, roomId]);
 
   const handleMouseDown = (e) => {
     isResizing.current = true;
@@ -180,9 +184,7 @@ function useChatRoom(userInfo) {
         await connectWebSocket(userInfo.name);
       }
       
-      setTimeout(async () => {
-        await fetchParticipants();
-      }, 500);
+      await fetchParticipants();
       
     } catch (error) {
       console.error('채팅방 초기화 중 오류:', error);
@@ -311,8 +313,8 @@ const ParticipantList = ({ participants, userInfo, onlineUsers }) => {
             <span className="participant-name">
               {participant.name}
               {participant.userIdx === userInfo.userIdx && ' (나)'}
-              <small style={{ marginLeft: '8px', color: isOnline ? '#2ecc71' : '#95a5a6' }}>
-                ({isOnline ? '온라인' : '오프라인'})
+              <small>
+                {isOnline ? '온라인' : '오프라인'}
               </small>
             </span>
           </li>
