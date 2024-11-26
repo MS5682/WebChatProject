@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sms.webchat.dto.response.ChatRoomListDTO;
 import com.sms.webchat.dto.response.PublicGroupChatRoomDTO;
+import com.sms.webchat.dto.response.ChatRoomParticipantDTO;
 import com.sms.webchat.repository.ChatRoomRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -23,5 +24,9 @@ public class ChatRoomService {
 
     public List<PublicGroupChatRoomDTO> getPublicGroupChatRooms() {
         return chatRoomRepository.findPublicGroupChatRooms();
+    }
+
+    public List<ChatRoomParticipantDTO> getChatRoomParticipants(Long roomId) {
+        return chatRoomRepository.findParticipantsByRoomId(roomId);
     }
 } 

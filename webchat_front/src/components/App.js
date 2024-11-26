@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
@@ -11,6 +11,8 @@ import ChangePassword from './ChangePassword';
 import FriendsList from './FriendsList';
 import FriendRequests from './FriendRequests';
 import '../styles/App.css';
+import { Client } from '@stomp/stompjs';
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userInfo, setUserInfo] = useState({
@@ -21,6 +23,8 @@ function App() {
   });
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isFriendsListOpen, setIsFriendsListOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+  const clientRef = useRef(null);
 
   useEffect(() => {
     if (token) {
@@ -86,6 +90,97 @@ function App() {
     setIsFriendsListOpen(!isFriendsListOpen);
   };
 
+  const connectWebSocket = useCallback((userIdx) => {
+    const client = new Client({
+      brokerURL: 'ws://localhost:8080/ws',
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: () => {
+        console.log('WebSocket Connected!');
+        setIsOnline(true);
+        
+        // 온라인 상태 알림
+        client.publish({
+          destination: '/app/user.status',
+          body: JSON.stringify({
+            userIdx: userIdx,
+            status: 'ONLINE'
+          })
+        });
+
+        // 유저 상태 변경 구독
+        client.subscribe('/topic/user.status', (message) => {
+          try {
+            const statusUpdate = JSON.parse(message.body);
+            // FriendsList 컴포넌트에 상태 업데이트를 전달하기 위한 이벤트 발생
+            const event = new CustomEvent('userStatusUpdate', {
+              detail: statusUpdate
+            });
+            window.dispatchEvent(event);
+          } catch (error) {
+            console.error('상태 업데이트 처리 중 오류:', error);
+          }
+        });
+      },
+      onDisconnect: () => {
+        console.log('WebSocket Disconnected!');
+        setIsOnline(false);
+      }
+    });
+
+    try {
+      client.activate();
+      clientRef.current = client;
+    } catch (error) {
+      console.error('Connection error:', error);
+      setIsOnline(false);
+    }
+  }, []);
+
+  // 로그인 상태 변경 감지
+  useEffect(() => {
+    if (isLoggedIn && userInfo.userIdx) {
+      connectWebSocket(userInfo.userIdx);
+    }
+
+    return () => {
+      if (clientRef.current) {
+        // 오프라인 상태 알림 후 연결 종료
+        if (isLoggedIn && userInfo.userIdx) {
+          clientRef.current.publish({
+            destination: '/app/user.status',
+            body: JSON.stringify({
+              userIdx: userInfo.userIdx,
+              status: 'OFFLINE'
+            })
+          });
+        }
+        clientRef.current.deactivate();
+      }
+    };
+  }, [isLoggedIn, userInfo, connectWebSocket]);
+
+  // 페이지 종료 시 오프라인 처리
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isLoggedIn && userInfo.userIdx && clientRef.current) {
+        clientRef.current.publish({
+          destination: '/app/user.status',
+          body: JSON.stringify({
+            userIdx: userInfo.userIdx,
+            status: 'OFFLINE'
+          })
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isLoggedIn, userInfo]);
+
   return (
     <div className="app">
       <Header 
@@ -102,7 +197,9 @@ function App() {
                 userInfo={userInfo}
               />
             } />
-            <Route path="/chat/:roomId" element={<ChatRoom />} />
+            <Route path="/chat/:roomId" element={
+              <ChatRoom userInfo={userInfo} />
+            } />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/find-id" element={<FindId />} />

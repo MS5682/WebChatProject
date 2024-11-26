@@ -1,12 +1,222 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
+import { useNavigate, useParams } from 'react-router-dom';
+import { FiPaperclip, FiImage, FiArrowLeft } from 'react-icons/fi';
 import '../styles/ChatRoom.css';
-import { FiPaperclip, FiImage, FiFile, FiArrowLeft } from 'react-icons/fi';  
-import SockJS from 'sockjs-client';
-import { useNavigate } from 'react-router-dom';
 
-// ChatInputForm을 별도의 컴포넌트로 분리하고 React.memo로 감싸기
-const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
+// ================ Logic & Handlers ================
+
+function useChatRoom(userInfo) {
+  const navigate = useNavigate();
+  const { roomId } = useParams();
+  
+  const [messages, setMessages] = useState(() => {
+    const cached = localStorage.getItem(`chat-messages-${roomId}`);
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [newMessage, setNewMessage] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [userListWidth, setUserListWidth] = useState(200);
+  const [participants, setParticipants] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  
+  const clientRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const chatMessagesRef = useRef(null);
+  const isResizing = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+
+  const fetchParticipants = useCallback(async () => {
+    try {
+      const response = await fetch(`/chat-rooms/participant/${roomId}`);
+      if (!response.ok) {
+        throw new Error('참여자 목록을 불러오는데 실패했습니다.');
+      }
+      const data = await response.json();
+      setParticipants(data);
+    } catch (error) {
+      console.error('참여자 목록 조회 오류:', error);
+    }
+  }, [roomId]);
+
+  useEffect(() => {
+    fetchParticipants();
+  }, [fetchParticipants]);
+
+  const connectWebSocket = useCallback((user) => {
+    const client = new Client({
+      brokerURL: 'ws://localhost:8080/ws',
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: () => {
+        setIsConnected(true);
+        
+        client.subscribe(`/topic/room/${roomId}`, (message) => {
+          try {
+            const receivedMessage = JSON.parse(message.body);
+            
+            switch(receivedMessage.type) {
+              case 'JOIN':
+                setMessages(prevMessages => [...prevMessages, {
+                  type: 'NOTIFICATION',
+                  content: `${receivedMessage.sender}님이 입장하셨습니다.`,
+                  sender: 'system',
+                  time: new Date().toISOString()
+                }]);
+                fetchParticipants();
+                break;
+                
+              case 'LEAVE':
+                setMessages(prevMessages => [...prevMessages, {
+                  type: 'NOTIFICATION',
+                  content: `${receivedMessage.sender}님이 퇴장하셨습니다.`,
+                  sender: 'system',
+                  time: new Date().toISOString()
+                }]);
+                fetchParticipants();
+                break;
+                
+              case 'CHAT':
+                setMessages(prevMessages => [...prevMessages, receivedMessage]);
+                break;
+            }
+          } catch (error) {
+            console.error('메시지 처리 중 오류:', error);
+          }
+        });
+
+        client.subscribe('/topic/status', (message) => {
+          try {
+            const statusUpdate = JSON.parse(message.body);
+            if (Array.isArray(statusUpdate.onlineUsers)) {
+              const onlineUserSet = new Set(statusUpdate.onlineUsers.map(String));
+              setOnlineUsers(onlineUserSet);
+            }
+          } catch (error) {
+            console.error('상태 업데이트 처리 중 오류:', error);
+          }
+        });
+      },
+      onDisconnect: () => {
+        setIsConnected(false);
+      },
+      onStompError: (frame) => {
+        console.error('STOMP error:', frame);
+      },
+      onWebSocketError: (event) => {
+        console.error('WebSocket error:', event);
+      },
+      onWebSocketClose: (event) => {
+        console.error('WebSocket closed:', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        });
+      }
+    });
+
+    try {
+      client.activate();
+      clientRef.current = client;
+    } catch (error) {
+      console.error('Connection error:', error);
+      setIsConnected(false);
+    }
+  }, [roomId, fetchParticipants]);
+
+  const handleMessageSubmit = useCallback(async (message, file) => {
+    if (!isConnected || !clientRef.current?.connected) {
+      console.error('WebSocket이 연결되어 있지 않습니다.');
+      return;
+    }
+
+    try {
+      let messageData = {
+        type: 'CHAT',
+        content: message,
+        sender: userInfo.name,
+        roomId: roomId,
+        time: new Date().toISOString()
+      };
+
+      clientRef.current.publish({
+        destination: `/app/chat.room/${roomId}/send`,
+        body: JSON.stringify(messageData)
+      });
+    } catch (error) {
+      console.error('메시지 전송 중 오류:', error);
+    }
+  }, [isConnected, userInfo.name, roomId]);
+
+  const handleMouseDown = (e) => {
+    isResizing.current = true;
+    startX.current = e.clientX;
+    startWidth.current = userListWidth;
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing.current) return;
+    const diff = e.clientX - startX.current;
+    const newWidth = Math.max(150, Math.min(400, startWidth.current + diff));
+    setUserListWidth(newWidth);
+  };
+
+  const handleMouseUp = () => {
+    isResizing.current = false;
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
+  const scrollToBottom = () => {
+    if (chatMessagesRef.current) {
+      const { scrollHeight, clientHeight } = chatMessagesRef.current;
+      chatMessagesRef.current.scrollTo({
+        top: scrollHeight - clientHeight,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (userInfo?.name) {
+      connectWebSocket(userInfo.name);
+    }
+
+    return () => {
+      if (clientRef.current) {
+        clientRef.current.deactivate();
+      }
+    };
+  }, [userInfo, connectWebSocket]);
+
+  useEffect(() => {
+    localStorage.setItem(`chat-messages-${roomId}`, JSON.stringify(messages));
+  }, [messages, roomId]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  return {
+    messages,
+    participants,
+    userListWidth,
+    chatMessagesRef,
+    handleMessageSubmit,
+    handleMouseDown,
+    navigate,
+    onlineUsers
+  };
+}
+
+// ================ UI Components ================
+
+const ChatInputForm = React.memo(({ onSubmit }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
 
@@ -36,11 +246,7 @@ const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
         </label>
         <label className="upload-button" title="이미지 첨부">
           <FiImage />
-          <input 
-            type="file" 
-            accept="image/*" 
-            hidden 
-          />
+          <input type="file" accept="image/*" hidden />
         </label>
       </div>
       <button type="submit">전송</button>
@@ -48,324 +254,107 @@ const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
   );
 });
 
-function ChatRoom() {
-  const navigate = useNavigate();
-
-  // 상태 관리를 위한 state 선언
-  const [messages, setMessages] = useState([]); // 채팅 메시지 목록
-  const [newMessage, setNewMessage] = useState(''); // 새로운 메시지 입력값
-  const [username, setUsername] = useState(() => {
-    return localStorage.getItem('chat-username') || ''; // 로컬 스토리지에서 사용자명 가져오기
-  });
-  const [isConnected, setIsConnected] = useState(false); // WebSocket 연결 상태
-  const clientRef = useRef(null); // WebSocket 클라이언트 참조
-  const [activeUsers, setActiveUsers] = useState(new Set()); // 현재 접속중인 사용자 목록
-  const [selectedFile, setSelectedFile] = useState(null);  // 선택된 파일 상태 추가
-  const messagesEndRef = useRef(null);  // 스크롤을 위한 ref 추가
-  const [userListWidth, setUserListWidth] = useState(200);
-  const isResizing = useRef(false);
-  const startX = useRef(0);
-  const startWidth = useRef(0);
-  const chatMessagesRef = useRef(null);
-
-  // 컴포넌트 마운트 시 채팅 초기화
-  useEffect(() => {
-    const initializeChat = async () => {
-      let currentUsername = username;
-      
-      // 사용자명이 없는 경우 입력 요청
-      if (!currentUsername) {
-        const userInput = prompt('채팅에 사용할 이름을 입력하세요:');
-        if (userInput) {
-          currentUsername = userInput;
-          setUsername(userInput);
-          localStorage.setItem('chat-username', userInput);
-        }
-      }
-
-      if (currentUsername) {
-        connectWebSocket(currentUsername);
-      }
-    };
-
-    initializeChat();
-
-    // 컴포넌트 언마운트 시 WebSocket 연결 해제
-    return () => {
-      if (clientRef.current) {
-        clientRef.current.deactivate();
-      }
-    };
-  }, [username]);
-
-  // WebSocket 연결 설정
-  const connectWebSocket = (user) => {
-    const client = new Client({
-      brokerURL: 'ws://localhost:8080/ws',
-      debug: function (str) {
-        console.log('WebSocket Debug:', str);
-      },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-      onConnect: () => {
-        console.log('WebSocket Connected!');
-        setIsConnected(true);
-        
-        // 구독 설정
-        client.subscribe('/topic/public', (message) => {
-          console.log('Received message:', message.body);
-          
-          try {
-            const receivedMessage = JSON.parse(message.body);
-            
-            // 메시지 타입에 따른 처리
-            switch(receivedMessage.type) {
-              case 'JOIN':
-                setMessages(prevMessages => [...prevMessages, {
-                  type: 'NOTIFICATION',
-                  content: `${receivedMessage.sender}님이 입장하셨습니다.`,
-                  sender: 'system',
-                  time: new Date().toISOString()
-                }]);
-                // 접속자 목록 업데이트
-                if (receivedMessage.users) {
-                  setActiveUsers(new Set(receivedMessage.users));
-                }
-                break;
-                
-              case 'LEAVE':
-                setMessages(prevMessages => [...prevMessages, {
-                  type: 'NOTIFICATION',
-                  content: `${receivedMessage.sender}님이 퇴장하셨습니다.`,
-                  sender: 'system',
-                  time: new Date().toISOString()
-                }]);
-                // 접속자 목록 업데이트
-                if (receivedMessage.users) {
-                  setActiveUsers(new Set(receivedMessage.users));
-                }
-                break;
-
-              case 'ACTIVE_USERS':
-                // 활성 사용자 목록 업데이트
-                if (receivedMessage.users) {
-                  setActiveUsers(new Set(receivedMessage.users));
-                }
-                break;
-                
-              case 'CHAT':
-                setMessages(prevMessages => [...prevMessages, receivedMessage]);
-                break;
-            }
-          } catch (error) {
-            console.error('메시지 처리 중 오류:', error);
-          }
-        });
-
-        // 입장 메시지 발송
-        client.publish({
-          destination: '/app/chat.register',
-          body: JSON.stringify({
-            sender: user,
-            type: 'JOIN',
-            time: new Date().toISOString()
-          })
-        });
-
-        // 현재 활성 사용자 목록 요청
-        client.publish({
-          destination: '/app/chat.activeUsers',
-          body: JSON.stringify({})
-        });
-      },
-      onDisconnect: () => {
-        console.log('WebSocket Disconnected!');
-        setIsConnected(false);
-      },
-      onStompError: (frame) => {
-        console.error('STOMP error:', frame);
-      },
-      onWebSocketError: (event) => {
-        console.error('WebSocket error:', event);
-      },
-      onWebSocketClose: (event) => {
-        console.error('WebSocket closed:', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean
-        });
-      }
-    });
-
-    try {
-      console.log('Attempting to connect...');
-      client.activate();
-      clientRef.current = client;
-    } catch (error) {
-      console.error('Connection error:', error);
-      setIsConnected(false);
+const Message = ({ message, isMe }) => {
+  const renderContent = () => {
+    switch (message.type) {
+      case 'NOTIFICATION':
+        return (
+          <div className="message-notification">
+            {message.content}
+          </div>
+        );
+      case 'CHAT':
+      default:
+        return <div className="message-content">{message.content}</div>;
     }
   };
 
-  const handleMessageSubmit = useCallback(async (message, file) => {
-    if (!isConnected || !clientRef.current?.connected) {
-      console.error('WebSocket이 연결되어 있지 않습니다.');
-      return;
-    }
-
-    try {
-      let messageData;
-        
-        messageData = {
-          type: 'CHAT',
-          content: message,
-          sender: username,
-          time: new Date().toISOString()
-        };
-        console.log('전송할 텍스트 메시지:', messageData);
-
-      clientRef.current.publish({
-        destination: '/app/chat.send',
-        body: JSON.stringify(messageData)
-      });
-    } catch (error) {
-      console.error('메시지 전송 중 오류:', error);
-    }
-  }, [isConnected, username]);
-
-
-  // 페이지 종료 시 처리
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (clientRef.current && isConnected) {
-        clientRef.current.publish({
-          destination: '/app/chat.leave',
-          body: JSON.stringify({
-            sender: username,
-            type: 'LEAVE'
-          })
-        });
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      handleBeforeUnload();
-    };
-  }, [username, isConnected]);
-
-  // Message 컴포넌트 수정
-  const Message = ({ message, isMe }) => {
-    const renderContent = () => {
-      console.log('Rendering message:', message);  // 렌더링되는 메시지 확인
-
-      switch (message.type) {
-        case 'NOTIFICATION':
-          return (
-            <div className="message-notification">
-              {message.content}
-            </div>
-          );
-        case 'CHAT':
-        default:
-          return <div className="message-content">{message.content}</div>;
-      }
-    };
-
-    // 시스템 메시지는 다르게 스타일링
-    if (message.type === 'NOTIFICATION') {
-      return (
-        <div className="message system">
-          {renderContent()}
-          <div className="message-time">
-            {new Date(message.time).toLocaleTimeString()}
-          </div>
-        </div>
-      );
-    }
-
+  if (message.type === 'NOTIFICATION') {
     return (
-      <div className={`message ${isMe ? 'me' : 'other'}`}>
-        {!isMe && <div className="message-sender">{message.sender}</div>}
+      <div className="message system">
         {renderContent()}
         <div className="message-time">
           {new Date(message.time).toLocaleTimeString()}
         </div>
       </div>
     );
-  };
+  }
 
-  const handleMouseDown = (e) => {
-    isResizing.current = true;
-    startX.current = e.clientX;
-    startWidth.current = userListWidth;
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
+  return (
+    <div className={`message ${isMe ? 'me' : 'other'}`}>
+      {!isMe && <div className="message-sender">{message.sender}</div>}
+      {renderContent()}
+      <div className="message-time">
+        {new Date(message.time).toLocaleTimeString()}
+      </div>
+    </div>
+  );
+};
 
-  const handleMouseMove = (e) => {
-    if (!isResizing.current) return;
-    const diff = e.clientX - startX.current;
-    const newWidth = Math.max(150, Math.min(400, startWidth.current + diff));
-    setUserListWidth(newWidth);
-  };
+// ================ Main Component ================
 
-  const handleMouseUp = () => {
-    isResizing.current = false;
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
+function ChatRoom({ userInfo }) {
+  const {
+    messages,
+    participants,
+    userListWidth,
+    chatMessagesRef,
+    handleMessageSubmit,
+    handleMouseDown,
+    navigate,
+    onlineUsers
+  } = useChatRoom(userInfo);
 
-  // 채팅창만 스크롤하는 함수
-  const scrollToBottom = () => {
-    if (chatMessagesRef.current) {
-      const { scrollHeight, clientHeight } = chatMessagesRef.current;
-      chatMessagesRef.current.scrollTo({
-        top: scrollHeight - clientHeight,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  // 새 메시지가 추가될 때마다 스크롤
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // UI 렌더링
   return (
     <div className="chat-container">
       <div className="user-list" style={{ width: userListWidth }}>
         <div className="resize-handle" onMouseDown={handleMouseDown}></div>
-        <h3>접속자 목록</h3>
+        <h3>
+          채팅방 참여자 ({participants.length}) 
+        </h3>
         <ul>
-          {[...activeUsers].map(user => (
-            <li key={user}>{user}</li>
-          ))}
+          {participants.map(participant => {
+            const isOnline = onlineUsers.has(String(participant.userIdx));
+            
+            return (
+              <li 
+                key={participant.userIdx}
+                className={`
+                  ${participant.userIdx === userInfo.userIdx ? 'current-user' : ''}
+                  ${isOnline ? 'online' : 'offline'}
+                `}
+              >
+                <span className="status-indicator"></span>
+                <span className="participant-name">
+                  {participant.name}
+                  {participant.userIdx === userInfo.userIdx && ' (나)'}
+                  <small style={{ marginLeft: '8px', color: isOnline ? '#2ecc71' : '#95a5a6' }}>
+                    ({isOnline ? '온라인' : '오프라인'})
+                  </small>
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </div>
-      {/* 채팅방 메인 영역 */}
       <div className="chat-room">
         <div className="chat-header">
           <button className="back-button" onClick={() => navigate(-1)}>
             <FiArrowLeft /> 뒤로가기
           </button>
           <h2>채팅방</h2>
-          <span className="user-info">{username}</span>
+          <span className="user-info"></span>
         </div>
-        {/* 메시지 표시 영역 */}
         <div className="chat-messages" ref={chatMessagesRef}>
           {messages.map((message, index) => (
-            <Message key={index} message={message} isMe={message.sender === username} />
+            <Message 
+              key={index} 
+              message={message} 
+              isMe={message.sender === userInfo.name} 
+            />
           ))}
         </div>
-        {/* 메시지 입력 폼 */}
-        <ChatInputForm 
-          onSubmit={handleMessageSubmit}
-        />
+        <ChatInputForm onSubmit={handleMessageSubmit} />
       </div>
     </div>
   );

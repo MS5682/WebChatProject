@@ -30,10 +30,44 @@
 }
 
 .user-list li {
-  padding: 8px 0;
-  color: #666;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.9rem;
-  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ccc;
+  flex-shrink: 0;
+  position: static;
+  display: inline-block;
+}
+
+.user-list li.online .status-indicator {
+  background-color: #2ecc71;
+  box-shadow: 0 0 4px rgba(46, 204, 113, 0.5);
+}
+
+.user-list li.offline .status-indicator {
+  background-color: #95a5a6;
+}
+
+.participant-name {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+
+.user-list li.current-user {
+  background-color: #f8f9fa;
+  font-weight: 500;
 }
 
 .chat-room {

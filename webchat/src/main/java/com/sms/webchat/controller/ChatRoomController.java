@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sms.webchat.dto.response.ChatRoomListDTO;
 import com.sms.webchat.dto.response.PublicGroupChatRoomDTO;
+import com.sms.webchat.dto.response.ChatRoomParticipantDTO;
 import com.sms.webchat.service.ChatRoomService;
 
 import lombok.RequiredArgsConstructor;
@@ -32,5 +33,12 @@ public class ChatRoomController {
     public ResponseEntity<List<PublicGroupChatRoomDTO>> getPublicGroupChatRooms() {
         List<PublicGroupChatRoomDTO> publicGroupChatRooms = chatRoomService.getPublicGroupChatRooms();
         return ResponseEntity.ok(publicGroupChatRooms);
+    }
+
+    @GetMapping("/participant/{roomId}")
+    public ResponseEntity<List<ChatRoomParticipantDTO>> getChatRoomParticipants(@PathVariable Long roomId) {
+        
+        List<ChatRoomParticipantDTO> participants = chatRoomService.getChatRoomParticipants(roomId);
+        return ResponseEntity.ok(participants);
     }
 }

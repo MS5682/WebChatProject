@@ -13,7 +13,8 @@ import com.sms.webchat.entity.QMessage;
 import com.sms.webchat.entity.QRoomParticipant;
 import com.sms.webchat.enums.RoomType;
 import com.querydsl.core.types.dsl.Expressions;
-
+import com.sms.webchat.dto.response.ChatRoomParticipantDTO;
+import com.sms.webchat.entity.QUser;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -114,6 +115,21 @@ public class ChatRoomRepositoryImpl implements ChatRoomRepositoryCustom {
                     .and(chatRoom.isActive.eq(true))
             )
             .orderBy(Expressions.stringPath("lastMessageTime").desc())
+            .fetch();
+    }
+
+    @Override
+    public List<ChatRoomParticipantDTO> findParticipantsByRoomId(Long roomId) {
+        QRoomParticipant participant = QRoomParticipant.roomParticipant;
+        QUser user = QUser.user;
+
+        return queryFactory
+            .select(Projections.constructor(ChatRoomParticipantDTO.class,
+                user.idx,
+                user.name))
+            .from(participant)
+            .join(participant.user, user)
+            .where(participant.room.id.eq(roomId))
             .fetch();
     }
 }
