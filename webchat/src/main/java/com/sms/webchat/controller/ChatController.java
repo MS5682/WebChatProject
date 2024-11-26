@@ -1,27 +1,40 @@
 package com.sms.webchat.controller;
 
-import com.sms.webchat.model.ChatMessage;
+import com.sms.webchat.dto.MessageDTO;
+import com.sms.webchat.entity.ChatRoom;
+import com.sms.webchat.entity.User;
+import com.sms.webchat.service.ChatRoomService;
+import com.sms.webchat.service.MessageService;
+import com.sms.webchat.service.UserService;
+
 
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 @Controller
 public class ChatController {
+    private final UserService userService;
+    private final ChatRoomService chatRoomService;
+    private final MessageService messageService;
     
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    public ChatController(UserService userService, ChatRoomService chatRoomService, MessageService messageService) {
+        this.userService = userService;
+        this.chatRoomService = chatRoomService;
+        this.messageService = messageService;
+    }
     
     @MessageMapping("/chat.room/{roomId}/send")
     @SendTo("/topic/room/{roomId}")
-    public ChatMessage sendMessage(@Payload ChatMessage chatMessage, 
+    public MessageDTO sendMessage(@Payload MessageDTO messageDTO, 
                                  @DestinationVariable String roomId) {
-        chatMessage.setTime(dateFormat.format(new Date()));
-        chatMessage.setRoomId(roomId);
-        System.out.println("메시지 수신 [방 " + roomId + "]: " + chatMessage);
-        return chatMessage;
+        User sender = userService.findByName(messageDTO.getSender());
+        ChatRoom room = chatRoomService.findById(Long.parseLong(messageDTO.getRoomId()));
+
+        messageService.saveMessage(messageDTO.toEntity(sender, room));
+
+        return messageDTO;
     }
 } 

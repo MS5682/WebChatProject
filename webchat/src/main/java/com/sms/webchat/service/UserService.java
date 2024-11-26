@@ -82,4 +82,9 @@ public class UserService {
         
         return user;
     }
+
+    public User findByName(String name) {
+        return userRepository.findByName(name)
+            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+    }
 } 

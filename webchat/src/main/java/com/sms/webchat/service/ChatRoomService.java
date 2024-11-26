@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sms.webchat.dto.response.ChatRoomListDTO;
 import com.sms.webchat.dto.response.PublicGroupChatRoomDTO;
+import com.sms.webchat.entity.ChatRoom;
 import com.sms.webchat.dto.response.ChatRoomParticipantDTO;
 import com.sms.webchat.repository.ChatRoomRepository;
 
@@ -29,4 +30,9 @@ public class ChatRoomService {
     public List<ChatRoomParticipantDTO> getChatRoomParticipants(Long roomId) {
         return chatRoomRepository.findParticipantsByRoomId(roomId);
     }
+
+    public ChatRoom findById(Long roomId) {
+        return chatRoomRepository.findById(roomId).orElse(null);
+    }
+
 } 

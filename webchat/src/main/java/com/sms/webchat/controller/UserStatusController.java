@@ -24,7 +24,7 @@ public class UserStatusController {
         }
         
         userStatus.setOnlineUsers(new ArrayList<>(onlineUsers));
-        System.out.println("현재 유저 상태: " + userStatus);
+        System.out.println("현재 온라인 유저: " + onlineUsers);
         return userStatus;
     }
 } 
