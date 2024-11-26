@@ -34,7 +34,6 @@ public class ChatController {
         ChatRoom room = chatRoomService.findById(Long.parseLong(messageDTO.getRoomId()));
 
         messageService.saveMessage(messageDTO.toEntity(sender, room));
-
         return messageDTO;
     }
 } 

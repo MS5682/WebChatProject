@@ -39,6 +39,27 @@ function useChatRoom(userInfo) {
     }
   }, [roomId]);
 
+  const updateLastReadTime = useCallback(async () => {
+    try {
+      const response = await fetch('/chat-rooms/read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          roomId: roomId,
+          userIdx: userInfo.userIdx
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('읽은 시간 갱신 실패');
+      }
+    } catch (error) {
+      console.error('읽은 시간 갱신 중 오류:', error);
+    }
+  }, [roomId, userInfo.userIdx]);
+
   const connectWebSocket = useCallback((user) => {
     const client = new Client({
       brokerURL: 'ws://localhost:8080/ws',
@@ -87,6 +108,9 @@ function useChatRoom(userInfo) {
                 
               case 'CHAT':
                 setMessages(prevMessages => [...prevMessages, receivedMessage]);
+                if (receivedMessage.sender !== userInfo.name) {
+                  updateLastReadTime();
+                }
                 break;
             }
           } catch (error) {
@@ -120,13 +144,10 @@ function useChatRoom(userInfo) {
       console.error('Connection error:', error);
       setIsConnected(false);
     }
-  }, [roomId, fetchParticipants]);
+  }, [roomId, userInfo.name, updateLastReadTime]);
 
   const handleMessageSubmit = useCallback(async (message, file) => {
-    if (!clientRef.current?.connected) {
-      console.error('WebSocket이 연결되어 있지 않습니다.');
-      return;
-    }
+    if (!clientRef.current?.connected) return;
 
     try {
       let messageData = {
@@ -137,15 +158,16 @@ function useChatRoom(userInfo) {
         time: new Date().toISOString()
       };
 
-      console.log('메시지 전송 시도:', messageData);
       clientRef.current.publish({
         destination: `/app/chat.room/${roomId}/send`,
         body: JSON.stringify(messageData)
       });
+
+      await updateLastReadTime();
     } catch (error) {
       console.error('메시지 전송 중 오류:', error);
     }
-  }, [userInfo.name, roomId]);
+  }, [userInfo.name, roomId, updateLastReadTime]);
 
   const handleMouseDown = (e) => {
     isResizing.current = true;

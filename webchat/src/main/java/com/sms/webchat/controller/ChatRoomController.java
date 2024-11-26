@@ -3,6 +3,8 @@ package com.sms.webchat.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -10,7 +12,8 @@ import com.sms.webchat.dto.response.ChatRoomListDTO;
 import com.sms.webchat.dto.response.PublicGroupChatRoomDTO;
 import com.sms.webchat.dto.response.ChatRoomParticipantDTO;
 import com.sms.webchat.service.ChatRoomService;
-
+import com.sms.webchat.dto.request.ReadTimeRequestDTO;
+import com.sms.webchat.dto.response.ApiResponseDto;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 
@@ -23,8 +26,6 @@ public class ChatRoomController {
     
     @GetMapping("/user/{userIdx}")
     public ResponseEntity<List<ChatRoomListDTO>> getChatRoomList(@PathVariable Long userIdx) {
-        // 요청 로그 출력
-        System.out.println("사용자 " + userIdx + "의 채팅방 목록 요청");
         List<ChatRoomListDTO> chatRooms = chatRoomService.getChatRoomsByUserIdx(userIdx);
         return ResponseEntity.ok(chatRooms);
     }
@@ -40,5 +41,15 @@ public class ChatRoomController {
         
         List<ChatRoomParticipantDTO> participants = chatRoomService.getChatRoomParticipants(roomId);
         return ResponseEntity.ok(participants);
+    }
+
+    @PostMapping("/read")
+    public ResponseEntity<?> updateLastReadTime(@RequestBody ReadTimeRequestDTO requestDTO) {
+        try {
+            chatRoomService.updateLastReadTime(requestDTO.getRoomId(), requestDTO.getUserIdx());
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponseDto(false, e.getMessage()));
+        }
     }
 }
