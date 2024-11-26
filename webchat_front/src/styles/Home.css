@@ -218,4 +218,24 @@
   margin-left: 8px;
   font-size: 0.9em;
 }
+
+.chat-room-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.chat-room-card-link:hover {
+  transform: translateY(-2px);
+}
+
+.chat-room-card {
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.chat-room-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
  

@@ -4,8 +4,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FiPaperclip, FiImage, FiArrowLeft } from 'react-icons/fi';
 import '../styles/ChatRoom.css';
 
-// ================ Logic & Handlers ================
-
 function useChatRoom(userInfo) {
   const navigate = useNavigate();
   const { roomId } = useParams();
@@ -36,14 +34,11 @@ function useChatRoom(userInfo) {
       }
       const data = await response.json();
       setParticipants(data);
+      connectWebSocket(userInfo.name);
     } catch (error) {
       console.error('참여자 목록 조회 오류:', error);
     }
-  }, [roomId]);
-
-  useEffect(() => {
-    fetchParticipants();
-  }, [fetchParticipants]);
+  }, [roomId, userInfo.name]);
 
   const connectWebSocket = useCallback((user) => {
     const client = new Client({
@@ -52,8 +47,17 @@ function useChatRoom(userInfo) {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
-        setIsConnected(true);
-        
+        client.subscribe('/topic/status', (message) => {
+          try {
+            const statusUpdate = JSON.parse(message.body);
+            if (Array.isArray(statusUpdate.onlineUsers)) {
+              setOnlineUsers(new Set(statusUpdate.onlineUsers.map(String)));
+            }
+          } catch (error) {
+            console.error('상태 업데이트 처리 중 오류:', error);
+          }
+        });
+
         client.subscribe(`/topic/room/${roomId}`, (message) => {
           try {
             const receivedMessage = JSON.parse(message.body);
@@ -85,18 +89,6 @@ function useChatRoom(userInfo) {
             }
           } catch (error) {
             console.error('메시지 처리 중 오류:', error);
-          }
-        });
-
-        client.subscribe('/topic/status', (message) => {
-          try {
-            const statusUpdate = JSON.parse(message.body);
-            if (Array.isArray(statusUpdate.onlineUsers)) {
-              const onlineUserSet = new Set(statusUpdate.onlineUsers.map(String));
-              setOnlineUsers(onlineUserSet);
-            }
-          } catch (error) {
-            console.error('상태 업데이트 처리 중 오류:', error);
           }
         });
       },
@@ -182,17 +174,30 @@ function useChatRoom(userInfo) {
     }
   };
 
-  useEffect(() => {
-    if (userInfo?.name) {
-      connectWebSocket(userInfo.name);
+  const initializeRoom = useCallback(async () => {
+    try {
+      if (userInfo?.name) {
+        await connectWebSocket(userInfo.name);
+      }
+      
+      setTimeout(async () => {
+        await fetchParticipants();
+      }, 500);
+      
+    } catch (error) {
+      console.error('채팅방 초기화 중 오류:', error);
     }
+  }, [userInfo, connectWebSocket, fetchParticipants]);
 
+  useEffect(() => {
+    initializeRoom();
+    
     return () => {
       if (clientRef.current) {
         clientRef.current.deactivate();
       }
     };
-  }, [userInfo, connectWebSocket]);
+  }, [initializeRoom]);
 
   useEffect(() => {
     localStorage.setItem(`chat-messages-${roomId}`, JSON.stringify(messages));
@@ -213,8 +218,6 @@ function useChatRoom(userInfo) {
     onlineUsers
   };
 }
-
-// ================ UI Components ================
 
 const ChatInputForm = React.memo(({ onSubmit }) => {
   const [inputMessage, setInputMessage] = useState('');
@@ -291,7 +294,33 @@ const Message = ({ message, isMe }) => {
   );
 };
 
-// ================ Main Component ================
+const ParticipantList = ({ participants, userInfo, onlineUsers }) => {
+  return (
+    <ul>
+      {participants?.map(participant => {
+        const isOnline = onlineUsers.has(String(participant.userIdx));
+        return (
+          <li 
+            key={participant.userIdx}
+            className={`
+              ${participant.userIdx === userInfo.userIdx ? 'current-user' : ''}
+              ${isOnline ? 'online' : 'offline'}
+            `}
+          >
+            <span className="status-indicator"></span>
+            <span className="participant-name">
+              {participant.name}
+              {participant.userIdx === userInfo.userIdx && ' (나)'}
+              <small style={{ marginLeft: '8px', color: isOnline ? '#2ecc71' : '#95a5a6' }}>
+                ({isOnline ? '온라인' : '오프라인'})
+              </small>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+};
 
 function ChatRoom({ userInfo }) {
   const {
@@ -310,32 +339,13 @@ function ChatRoom({ userInfo }) {
       <div className="user-list" style={{ width: userListWidth }}>
         <div className="resize-handle" onMouseDown={handleMouseDown}></div>
         <h3>
-          채팅방 참여자 ({participants.length}) 
+          채팅방 참여자 ({participants?.length || 0}) 
         </h3>
-        <ul>
-          {participants.map(participant => {
-            const isOnline = onlineUsers.has(String(participant.userIdx));
-            
-            return (
-              <li 
-                key={participant.userIdx}
-                className={`
-                  ${participant.userIdx === userInfo.userIdx ? 'current-user' : ''}
-                  ${isOnline ? 'online' : 'offline'}
-                `}
-              >
-                <span className="status-indicator"></span>
-                <span className="participant-name">
-                  {participant.name}
-                  {participant.userIdx === userInfo.userIdx && ' (나)'}
-                  <small style={{ marginLeft: '8px', color: isOnline ? '#2ecc71' : '#95a5a6' }}>
-                    ({isOnline ? '온라인' : '오프라인'})
-                  </small>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        <ParticipantList 
+          participants={participants}
+          userInfo={userInfo}
+          onlineUsers={onlineUsers}
+        />
       </div>
       <div className="chat-room">
         <div className="chat-header">
@@ -360,4 +370,4 @@ function ChatRoom({ userInfo }) {
   );
 }
 
-export default ChatRoom; 
+export default ChatRoom;

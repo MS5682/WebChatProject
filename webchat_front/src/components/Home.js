@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Home.css';
 
 const Home = ({ isLoggedIn, userInfo }) => {
@@ -220,51 +220,72 @@ const formatMessageTime = (timestamp) => {
 
 // ChatRoomCard 컴포넌트 수정
 const ChatRoomCard = ({ room, type }) => {
+  const navigate = useNavigate();
+
+  const handleClick = (e) => {
+    e.preventDefault(); // 기본 Link 동작 방지
+    
+    // 먼저 WebSocket 연결 해제 (필요한 경우)
+    if (window.chatWebSocket) {
+      window.chatWebSocket.deactivate();
+    }
+
+    // 약간의 지연 후 페이지 이동
+    setTimeout(() => {
+      window.location.href = `/chat/${room.id}`;
+    }, 100);
+  };
+
   return (
-    <div className="chat-room-card">
-      <div className="room-header">
-        <div className="room-title">
-          <div className="room-icon">
-            {type === 'direct' ? '👤' : type === 'group' ? '👥' : '🌐'}
+    <div 
+      onClick={handleClick} 
+      className="chat-room-card-link"
+    >
+      <div className="chat-room-card">
+        <div className="room-header">
+          <div className="room-title">
+            <div className="room-icon">
+              {type === 'direct' ? '👤' : type === 'group' ? '👥' : '🌐'}
+            </div>
+            <h3>
+              {room.name}
+              {type === 'open' && room.hasPassword && (
+                <span className="lock-icon">🔒</span>
+              )}
+            </h3>
           </div>
-          <h3>
-            {room.name}
-            {type === 'open' && room.hasPassword && (
-              <span className="lock-icon">🔒</span>
-            )}
-          </h3>
-        </div>
-        {room.unreadCount > 0 && (
-          <span className="unread-count">{room.unreadCount}</span>
-        )}
-      </div>
-      
-      <div className="room-content">
-        <p className="description">
-          { room.lastMessage}
-        </p>
-      </div>
-      
-      <div className="room-footer">
-        <div className="room-info">
-          <span className="time">
-            {formatMessageTime(room.lastMessageTime)}
-          </span>
-          {(type === 'group' || type === 'open') && (
-            <span className="participant-count">
-              <span className="icon">👥 </span>
-              {room.participantCount}/{room.maxParticipants}
-            </span>
+          {room.unreadCount > 0 && (
+            <span className="unread-count">{room.unreadCount}</span>
           )}
         </div>
-
-        {room.tags && (
-          <div className="room-tags">
-            {room.tags.map(tag => (
-              <span key={tag} className="tag">#{tag}</span>
-            ))}
+        
+        <div className="room-content">
+          <p className="description">
+            {room.lastMessage}
+          </p>
+        </div>
+        
+        <div className="room-footer">
+          <div className="room-info">
+            <span className="time">
+              {formatMessageTime(room.lastMessageTime)}
+            </span>
+            {(type === 'group' || type === 'open') && (
+              <span className="participant-count">
+                <span className="icon">👥 </span>
+                {room.participantCount}/{room.maxParticipants}
+              </span>
+            )}
           </div>
-        )}
+
+          {room.tags && (
+            <div className="room-tags">
+              {room.tags.map(tag => (
+                <span key={tag} className="tag">#{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
