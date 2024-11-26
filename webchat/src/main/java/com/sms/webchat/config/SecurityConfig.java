@@ -26,19 +26,15 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf
-                .disable()
-            )
+            .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/ws/**").permitAll()     // WebSocket 연결 허용
-                .requestMatchers("/email/**").permitAll()  // 이메일 관련 엔드포인트 허용
-                .requestMatchers("/user/**").permitAll()   // 유저 관련 엔드포인트 허용
-                .requestMatchers("/topic/**").permitAll()  // WebSocket 구독 엔드포인트 허용
-                .requestMatchers("/app/**").permitAll()    // WebSocket 메시지 엔드포인트 허용
+                .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/email/**").permitAll()
+                .requestMatchers("/user/**").permitAll()
+                .requestMatchers("/topic/**").permitAll()
+                .requestMatchers("/app/**").permitAll()
+                .requestMatchers("/chat-rooms/**").permitAll()
                 .anyRequest().authenticated()
-            )
-            .headers(headers -> headers
-                .frameOptions(frameOptions -> frameOptions.sameOrigin())  // WebSocket을 위한 프레임 옵션 설정
             );
         
         return http.build();

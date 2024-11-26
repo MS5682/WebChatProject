@@ -35,8 +35,6 @@ const Login = () => {
 
       if (response.ok) {
         const token = response.headers.get('Authorization');
-        console.log('받은 토큰:', token);
-        
         if (token) {
           localStorage.setItem('token', token);
           navigate('/');

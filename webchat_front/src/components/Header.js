@@ -12,9 +12,9 @@ const Header = ({ isLoggedIn, userInfo, onLogout }) => {
 
   return (
     <>
-      <div className="banner">
+      {/* <div className="banner">
         <p>🎉 웹 챗 서비스에 오신 것을 환영합니다!</p>
-      </div>
+      </div> */}
       <header className="header">
         <div className="logo">
           <Link to="/" className="logo-text">

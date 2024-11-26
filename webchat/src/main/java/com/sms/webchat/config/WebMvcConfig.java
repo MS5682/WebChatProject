@@ -28,9 +28,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
             "/user/find-id",        // 아이디 찾기 페이지
             "/user/changePassword", // 비밀번호 변경 페이지
             "/user/check-session",  // 세션 체크 경로 추가
-            "/user/check-auth",    // 추가
+            "/user/check-auth",     // 추가
             "/email/**",            // 이메일 관련 경로
-            "/ws/**"                // WebSocket 관련 경로
+            "/ws/**",              // WebSocket 관련 경로
+            "/chat-rooms/**"        // 채팅방 관련 경로 추가
         );
 
     }
@@ -42,7 +43,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .allowedOrigins("http://localhost:3000")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .exposedHeaders("Authorization")  // JWT 토큰 헤더 노출
+                .exposedHeaders("Authorization")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
