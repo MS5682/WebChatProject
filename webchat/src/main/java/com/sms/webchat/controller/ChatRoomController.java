@@ -18,6 +18,7 @@ import com.sms.webchat.dto.response.ApiResponseDto;
 import com.sms.webchat.dto.MessageDTO;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/chat-rooms")
@@ -64,6 +65,16 @@ public class ChatRoomController {
             return ResponseEntity.ok(unreadMessages);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    @GetMapping("/{roomId}/last-read-times")
+    public ResponseEntity<Map<Long, String>> getLastReadTimes(@PathVariable Long roomId) {
+        try {
+            Map<Long, String> lastReadTimes = chatRoomService.getLastReadTimes(roomId);
+            return ResponseEntity.ok(lastReadTimes);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 }

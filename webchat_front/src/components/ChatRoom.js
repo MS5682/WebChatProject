@@ -18,6 +18,7 @@ function useChatRoom(userInfo) {
   const [userListWidth, setUserListWidth] = useState(200);
   const [participants, setParticipants] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [lastReadTimes, setLastReadTimes] = useState({});
   
   const clientRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -25,6 +26,7 @@ function useChatRoom(userInfo) {
   const isResizing = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
+  const isFirstLoad = useRef(true);
 
   const fetchParticipants = useCallback(async () => {
     try {
@@ -39,7 +41,19 @@ function useChatRoom(userInfo) {
     }
   }, [roomId]);
 
+  const fetchLastReadTimes = useCallback(async () => {
+    try {
+      const response = await fetch(`/chat-rooms/${roomId}/last-read-times`);
+      if (!response.ok) throw new Error('Failed to fetch last read times');
+      const times = await response.json();
+      setLastReadTimes(times);
+    } catch (error) {
+      console.error('Error fetching last read times:', error);
+    }
+  }, [roomId]);
+
   const updateLastReadTime = useCallback(async () => {
+    console.log('Updating last read time...');
     try {
       const response = await fetch('/chat-rooms/read', {
         method: 'POST',
@@ -55,11 +69,12 @@ function useChatRoom(userInfo) {
       if (!response.ok) {
         throw new Error('읽은 시간 갱신 실패');
       }
+
+      await fetchLastReadTimes();
     } catch (error) {
       console.error('읽은 시간 갱신 중 오류:', error);
     }
-  }, [roomId, userInfo.userIdx]);
-
+  }, [roomId, userInfo.userIdx, fetchLastReadTimes]);
 
   const fetchUnreadMessages = useCallback(async () => {
     if (!userInfo || !userInfo.userIdx) {
@@ -68,21 +83,38 @@ function useChatRoom(userInfo) {
     }
 
     try {
+      const lastReadResponse = await fetch(`/chat-rooms/${roomId}/last-read-times`);
+      if (!lastReadResponse.ok) {
+        throw new Error('마지막 읽은 시간 로드 실패');
+      }
+      const lastReadTimes = await lastReadResponse.json();
+      const myLastReadTime = lastReadTimes[userInfo.userIdx];
+
       const response = await fetch(`/chat-rooms/${roomId}/unread-messages?userIdx=${userInfo.userIdx}`);
       if (!response.ok) {
         throw new Error('읽지 않은 메시지 로드 실패');
       }
       const unreadMessages = await response.json();
       
-      setMessages(prevMessages => [...prevMessages, ...unreadMessages]);
-      
       if (unreadMessages.length > 0) {
+        setMessages(prevMessages => [
+          ...prevMessages,
+          {
+            type: 'UNREAD_MARKER',
+            content: '여기까지 읽으셨습니다',
+            time: myLastReadTime || new Date().toISOString(),
+            sender: 'system',
+            temporary: true
+          },
+          ...unreadMessages
+        ]);
+        
         await updateLastReadTime();
       }
     } catch (error) {
       console.error('읽지 않은 메시지 처리 중 오류:', error);
     }
-  }, [roomId, userInfo]);
+  }, [roomId, userInfo, updateLastReadTime]);
 
   const connectWebSocket = useCallback((user) => {
     const client = new Client({
@@ -129,14 +161,28 @@ function useChatRoom(userInfo) {
                 break;
                 
               case 'CHAT':
-                setMessages(prevMessages => [...prevMessages, receivedMessage]);
                 if (receivedMessage.sender !== userInfo.name) {
+                  setMessages(prevMessages => [...prevMessages, receivedMessage]);
                   updateLastReadTime();
                 }
                 break;
             }
           } catch (error) {
             console.error('메시지 처리 중 오류:', error);
+          }
+        });
+
+        client.subscribe(`/topic/room/${roomId}/read-status`, (message) => {
+          try {
+            const readStatus = JSON.parse(message.body);
+            console.log('Received read status update:', readStatus);
+            
+            setLastReadTimes(prev => ({
+              ...prev,
+              [readStatus.userIdx]: readStatus.lastReadTime
+            }));
+          } catch (error) {
+            console.error('읽음 상태 업데이트 처리 중 오류:', error);
           }
         });
       },
@@ -168,31 +214,28 @@ function useChatRoom(userInfo) {
     }
   }, [roomId, userInfo.name, updateLastReadTime]);
 
-  const handleMessageSubmit = useCallback(async (message, file) => {
-    if (!clientRef.current?.connected) return;
+  const handleMessageSubmit = useCallback(async (message) => {
+    const messageData = {
+      type: 'CHAT',
+      content: message,
+      sender: userInfo.name,
+      roomId: roomId,
+      time: new Date().toISOString()
+    };
 
-    try {
-      let messageData = {
-        type: 'CHAT',
-        content: message,
-        sender: userInfo.name,
-        roomId: roomId
-      };
+    // 로컬에서 먼저 메시지 추가
+    setMessages(prevMessages => [...prevMessages, messageData]);
 
-      // 메시지 전송 후 응답을 기다림
-      await new Promise((resolve, reject) => {
-        clientRef.current.publish({
-          destination: `/app/chat.room/${roomId}/send`,
-          body: JSON.stringify(messageData),
-          headers: {},
-          onReceive: resolve,  // 메시지가 서버에 도달했을 때
-          onError: reject      // 에러 발생 시
-        });
-      });
-    } catch (error) {
-      console.error('메시지 전송 중 오류:', error);
-    }
-  }, [userInfo.name, roomId]);
+    // WebSocket으로 전송
+    await Promise.resolve(clientRef.current.publish({
+      destination: `/app/chat.room/${roomId}/send`,
+      body: JSON.stringify(messageData)
+    }));
+
+    setTimeout(async () => {
+      await updateLastReadTime();
+    }, 100);
+  }, [userInfo.name, roomId, updateLastReadTime]);
 
   const handleMouseDown = (e) => {
     isResizing.current = true;
@@ -220,22 +263,35 @@ function useChatRoom(userInfo) {
       const { scrollHeight, clientHeight } = chatMessagesRef.current;
       chatMessagesRef.current.scrollTo({
         top: scrollHeight - clientHeight,
-        behavior: 'smooth'
+        behavior: isFirstLoad.current ? 'auto' : 'smooth'
       });
     }
   };
+
+  const getUnreadCount = useCallback((messageTime) => {
+    if (!participants || !lastReadTimes) return 0;
+    
+    return participants.reduce((count, participant) => {
+      const lastReadTime = lastReadTimes[participant.userIdx];
+      if (!lastReadTime || new Date(messageTime) > new Date(lastReadTime)) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+  }, [participants, lastReadTimes]);
 
   const initializeRoom = useCallback(async () => {
     try {
       if (userInfo?.userIdx) {
         await connectWebSocket(userInfo.name);
         await fetchParticipants();
+        await fetchLastReadTimes();
         await fetchUnreadMessages();
       }
     } catch (error) {
       console.error('채팅방 초기화 중 오류:', error);
     }
-  }, [userInfo, connectWebSocket, fetchParticipants, fetchUnreadMessages]);
+  }, [userInfo, connectWebSocket, fetchParticipants, fetchLastReadTimes, fetchUnreadMessages]);
 
   useEffect(() => {
     initializeRoom();
@@ -248,11 +304,25 @@ function useChatRoom(userInfo) {
   }, [initializeRoom]);
 
   useEffect(() => {
-    localStorage.setItem(`chat-messages-${roomId}`, JSON.stringify(messages));
+    const permanentMessages = messages.filter(msg => !msg.temporary);
+    localStorage.setItem(`chat-messages-${roomId}`, JSON.stringify(permanentMessages));
   }, [messages, roomId]);
 
   useEffect(() => {
-    scrollToBottom();
+    if (isFirstLoad.current) {
+      scrollToBottom();
+      isFirstLoad.current = false;
+    } else {
+      const { scrollHeight, scrollTop, clientHeight } = chatMessagesRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+      
+      const lastMessage = messages[messages.length - 1];
+      const isMyMessage = lastMessage?.sender === userInfo.name;
+
+      if (isNearBottom || isMyMessage) {
+        scrollToBottom();
+      }
+    }
   }, [messages]);
 
   return {
@@ -263,7 +333,8 @@ function useChatRoom(userInfo) {
     handleMessageSubmit,
     handleMouseDown,
     navigate,
-    onlineUsers
+    onlineUsers,
+    getUnreadCount
   };
 }
 
@@ -305,12 +376,13 @@ const ChatInputForm = React.memo(({ onSubmit }) => {
   );
 });
 
-const Message = ({ message, isMe }) => {
+const Message = ({ message, isMe, unreadCount }) => {
   const renderContent = () => {
     switch (message.type) {
       case 'NOTIFICATION':
+      case 'UNREAD_MARKER':
         return (
-          <div className="message-notification">
+          <div className={`message-notification ${message.type.toLowerCase()}`}>
             {message.content}
           </div>
         );
@@ -320,9 +392,9 @@ const Message = ({ message, isMe }) => {
     }
   };
 
-  if (message.type === 'NOTIFICATION') {
+  if (message.type === 'NOTIFICATION' || message.type === 'UNREAD_MARKER') {
     return (
-      <div className="message system">
+      <div className={`message system ${message.type.toLowerCase()}`}>
         {renderContent()}
         <div className="message-time">
           {new Date(message.time).toLocaleTimeString()}
@@ -334,7 +406,12 @@ const Message = ({ message, isMe }) => {
   return (
     <div className={`message ${isMe ? 'me' : 'other'}`}>
       {!isMe && <div className="message-sender">{message.sender}</div>}
-      {renderContent()}
+      <div className="message-wrapper">
+        {renderContent()}
+        {unreadCount > 0 && (
+          <span className="unread-count">{unreadCount}</span>
+        )}
+      </div>
       <div className="message-time">
         {new Date(message.time).toLocaleTimeString()}
       </div>
@@ -379,7 +456,8 @@ function ChatRoom({ userInfo }) {
     handleMessageSubmit,
     handleMouseDown,
     navigate,
-    onlineUsers
+    onlineUsers,
+    getUnreadCount
   } = useChatRoom(userInfo);
 
   return (
@@ -408,7 +486,8 @@ function ChatRoom({ userInfo }) {
             <Message 
               key={index} 
               message={message} 
-              isMe={message.sender === userInfo.name} 
+              isMe={message.sender === userInfo.name}
+              unreadCount={getUnreadCount(message.time)}
             />
           ))}
         </div>

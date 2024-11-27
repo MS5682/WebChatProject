@@ -122,6 +122,29 @@ function App() {
             console.error('상태 업데이트 처리 중 오류:', error);
           }
         });
+
+        // 사용자의 모든 채팅방 관련 업데이트를 받는 구독 추가
+        client.subscribe(`/topic/user/${userIdx}/updates`, (message) => {
+          try {
+            const update = JSON.parse(message.body);
+            console.log('WebSocket update received:', update);
+            switch (update.type) {
+              case 'NEW_MESSAGE':
+                console.log('NEW_MESSAGE update:', {
+                  roomId: update.roomId,
+                  totalUnread: update.totalUnread,
+                  messageDTO: update.lastMessage
+                });
+                updateUnreadCount(update.roomId, update.totalUnread, update.lastMessage);
+                break;
+              case 'READ_STATUS':
+                updateUnreadCount(update.roomId, update.totalUnread);
+                break;
+            }
+          } catch (error) {
+            console.error('메시지 처리 중 오류:', error);
+          }
+        });
       },
       onDisconnect: () => {
         console.log('WebSocket Disconnected!');
@@ -180,6 +203,23 @@ function App() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [isLoggedIn, userInfo]);
+
+  // updateUnreadCount 함수 추가
+  const updateUnreadCount = (roomId, totalUnread, messageDTO) => {
+    console.log('Dispatching unreadCountUpdate event:', {
+      roomId,
+      totalUnread,
+      messageDTO
+    });
+    const event = new CustomEvent('unreadCountUpdate', {
+      detail: { 
+        roomId, 
+        totalUnread,
+        messageDTO
+      }
+    });
+    window.dispatchEvent(event);
+  };
 
   return (
     <div className="app">

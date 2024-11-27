@@ -2,6 +2,7 @@ package com.sms.webchat.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import com.sms.webchat.dto.response.ChatRoomListDTO;
 import com.sms.webchat.dto.response.PublicGroupChatRoomDTO;
@@ -13,13 +14,15 @@ import com.sms.webchat.entity.RoomParticipant;
 import com.sms.webchat.dto.MessageDTO;
 import com.sms.webchat.entity.Message;
 import com.sms.webchat.repository.MessageRepository;
+import com.sms.webchat.dto.ReadStatusMessage;
 
 import lombok.RequiredArgsConstructor;
+
+import java.util.Date;
 import java.util.List;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.stream.Collectors;
+import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -28,6 +31,7 @@ public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final RoomParticipantRepository roomParticipantRepository;
     private final MessageRepository messageRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     
     public List<ChatRoomListDTO> getChatRoomsByUserIdx(Long userIdx) {
         return chatRoomRepository.findChatRoomsByUserIdx(userIdx);
@@ -52,6 +56,12 @@ public class ChatRoomService {
         
         participant.setLastReadTime(LocalDateTime.now());
         roomParticipantRepository.save(participant);
+        
+        ReadStatusMessage readStatus = new ReadStatusMessage(userIdx, new Date().toInstant().toString());
+        messagingTemplate.convertAndSend(
+            "/topic/room/" + roomId + "/read-status", 
+            readStatus
+        );
     }
 
     @Transactional(readOnly = true)
@@ -73,6 +83,19 @@ public class ChatRoomService {
         return unreadMessages.stream()
             .map(MessageDTO::fromEntity)
             .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, String> getLastReadTimes(Long roomId) {
+        List<RoomParticipant> participants = roomParticipantRepository.findAllByRoomId(roomId);
+        
+        return participants.stream()
+            .collect(Collectors.toMap(
+                participant -> participant.getUser().getIdx(),
+                participant -> participant.getLastReadTime() != null 
+                    ? participant.getLastReadTime().toString() 
+                    : participant.getJoinedAt().toString()
+            ));
     }
 
 } 

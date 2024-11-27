@@ -423,4 +423,61 @@
 
 .chat-messages > :first-child {
   margin-top: auto;
+}
+
+.message-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 메시지 래퍼 기본 스타일 */
+.message-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 내 메시지일 때 (오른쪽 정렬) */
+.message.me .message-wrapper {
+  flex-direction: row-reverse;  /* 요소들의 순서를 반대로 */
+  justify-content: flex-start;
+}
+
+/* 상대방 메시지일 때 (왼쪽 정렬) */
+.message.other .message-wrapper {
+  flex-direction: row;
+  justify-content: flex-start;
+}
+
+/* 채팅방 내 메시지의 읽지 않은 수 표시 스타일 */
+.message .unread-count {
+  font-size: 12px;
+  color: #856404;  /* 진한 노란색 텍스트 */
+  background-color: #fff3cd;  /* 연한 노란색 배경 */
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* 시스템 메시지는 가운데 정렬 유지 */
+.message.system .message-wrapper {
+  justify-content: center;
+}
+
+.message.system.unread_marker {
+  background-color: rgba(255, 235, 205, 0.3);
+  border: 1px dashed #ffd700;
+  margin: 10px 0;
+  padding: 5px 10px;
+  text-align: center;
+  font-style: italic;
+  color: #666;
+}
+
+.message-notification.unread_marker {
+  color: #666;
+  font-size: 0.9em;
 } 

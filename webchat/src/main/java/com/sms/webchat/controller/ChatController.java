@@ -12,7 +12,6 @@ import com.sms.webchat.service.UserService;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
 
 @Controller
@@ -28,15 +27,11 @@ public class ChatController {
     }
     
     @MessageMapping("/chat.room/{roomId}/send")
-    @SendTo("/topic/room/{roomId}")
-    public MessageDTO sendMessage(@Payload MessageDTO messageDTO, 
-                                 @DestinationVariable String roomId) {
+    public void sendMessage(@Payload MessageDTO messageDTO, 
+                          @DestinationVariable String roomId) {
         User sender = userService.findByName(messageDTO.getSender());
         ChatRoom room = chatRoomService.findById(Long.parseLong(messageDTO.getRoomId()));
         
-        Message savedMessage = messageService.saveMessage(messageDTO.toEntity(sender, room));
-        chatRoomService.updateLastReadTime(Long.parseLong(roomId), sender.getIdx());
-        
-        return MessageDTO.fromEntity(savedMessage);
+        messageService.saveMessage(messageDTO.toEntity(sender, room));
     }
 } 

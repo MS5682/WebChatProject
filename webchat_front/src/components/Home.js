@@ -19,6 +19,53 @@ const Home = ({ isLoggedIn, userInfo }) => {
     fetchPublicChatRooms();
   }, [isLoggedIn, userInfo]);
 
+  useEffect(() => {
+    const handleUnreadCountUpdate = (event) => {
+      const { roomId, totalUnread, messageDTO } = event.detail;
+      console.log('Received unreadCountUpdate event:', {
+        roomId,
+        totalUnread,
+        messageDTO
+      });
+
+      setJoinedChatRooms(prev => {
+        const newRooms = { ...prev };
+        ['direct', 'group', 'open'].forEach(type => {
+          newRooms[type] = prev[type].map(room => {
+            if (room.roomId === roomId) {
+              console.log('Updating room:', room.roomId, {
+                currentLatestMessage: room.latestMessage,
+                newMessage: messageDTO?.content,
+                currentLastMessageTime: room.lastMessageTime,
+                newMessageTime: messageDTO?.time
+              });
+
+              const updates = {
+                ...room,
+                unreadCount: totalUnread
+              };
+
+              if (messageDTO) {
+                updates.latestMessage = messageDTO.content;
+                updates.lastMessageTime = messageDTO.time;
+              }
+
+              console.log('Updated room data:', updates);
+              return updates;
+            }
+            return room;
+          });
+        });
+        return newRooms;
+      });
+    };
+
+    window.addEventListener('unreadCountUpdate', handleUnreadCountUpdate);
+    return () => {
+      window.removeEventListener('unreadCountUpdate', handleUnreadCountUpdate);
+    };
+  }, []);
+
   const fetchChatRooms = async () => {
     try {
       const response = await fetch('/chat-rooms/user/'+userInfo.userIdx);

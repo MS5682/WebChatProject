@@ -115,12 +115,17 @@
 }
 
 .unread-count {
-  background: #ff6b6b;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 12px;
   font-size: 12px;
-  font-weight: 600;
+  color: #856404;
+  background-color: #fff3cd;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  min-width: 20px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .room-content {
@@ -237,5 +242,10 @@
 
 .chat-room-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 호버 효과 (선택사항) */
+.chat-room-card:hover .unread-count {
+  background-color: #ffeeba;
 }
  
