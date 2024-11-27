@@ -23,6 +23,7 @@ function useChatRoom(userInfo) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   
   const clientRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -57,7 +58,6 @@ function useChatRoom(userInfo) {
   }, [roomId]);
 
   const updateLastReadTime = useCallback(async () => {
-    console.log('Updating last read time...');
     try {
       const response = await fetch('/chat-rooms/read', {
         method: 'POST',
@@ -179,7 +179,6 @@ function useChatRoom(userInfo) {
         client.subscribe(`/topic/room/${roomId}/read-status`, (message) => {
           try {
             const readStatus = JSON.parse(message.body);
-            console.log('Received read status update:', readStatus);
             
             setLastReadTimes(prev => ({
               ...prev,
@@ -262,15 +261,15 @@ function useChatRoom(userInfo) {
     document.removeEventListener('mouseup', handleMouseUp);
   };
 
-  const scrollToBottom = () => {
-    if (chatMessagesRef.current) {
-      const { scrollHeight, clientHeight } = chatMessagesRef.current;
-      chatMessagesRef.current.scrollTo({
-        top: scrollHeight - clientHeight,
-        behavior: isFirstLoad.current ? 'auto' : 'smooth'
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    const chatMessages = chatMessagesRef.current;
+    if (chatMessages) {
+      chatMessages.scrollTo({
+        top: chatMessages.scrollHeight,
+        behavior
       });
     }
-  };
+  }, []);
 
   const getUnreadCount = useCallback((messageTime) => {
     if (!participants || !lastReadTimes) return 0;
@@ -394,6 +393,37 @@ function useChatRoom(userInfo) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // 스크롤 위치 감지
+  useEffect(() => {
+    const chatMessages = chatMessagesRef.current;
+    
+    const handleScroll = () => {
+      if (!chatMessages) return;
+      
+      const { scrollTop, scrollHeight, clientHeight } = chatMessages;
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+      
+      // 맨 아래에서 300px 이상 올라왔을 때 버튼 표시
+      setShowScrollButton(distanceFromBottom > 300);
+    };
+
+    // 초기 스크롤 상태 확인
+    handleScroll();
+
+    chatMessages?.addEventListener('scroll', handleScroll);
+    
+    // 새 메시지가 추가될 때마다 스크롤 상태 확인
+    const observer = new MutationObserver(handleScroll);
+    if (chatMessages) {
+      observer.observe(chatMessages, { childList: true, subtree: true });
+    }
+
+    return () => {
+      chatMessages?.removeEventListener('scroll', handleScroll);
+      observer.disconnect();
+    };
+  }, []);
+
   return {
     messages,
     participants,
@@ -411,7 +441,9 @@ function useChatRoom(userInfo) {
     handleSearch,
     navigateSearch,
     searchResults,
-    currentSearchIndex
+    currentSearchIndex,
+    showScrollButton,
+    scrollToBottom
   };
 }
 
@@ -561,6 +593,21 @@ const SearchBar = ({
   );
 };
 
+// 맨 아래로 이동 버튼 컴포넌트
+const ScrollToBottomButton = ({ show, onClick }) => {
+  if (!show) return null;
+
+  return (
+    <button 
+      className="scroll-to-bottom"
+      onClick={onClick}
+      title="맨 아래로 이동"
+    >
+      ↓
+    </button>
+  );
+};
+
 function ChatRoom({ userInfo }) {
   const {
     messages,
@@ -579,7 +626,9 @@ function ChatRoom({ userInfo }) {
     handleSearch,
     navigateSearch,
     searchResults,
-    currentSearchIndex
+    currentSearchIndex,
+    showScrollButton,
+    scrollToBottom
   } = useChatRoom(userInfo);
 
   return (
@@ -624,15 +673,26 @@ function ChatRoom({ userInfo }) {
             currentIndex={currentSearchIndex}
           />
         )}
-        <div className="chat-messages" ref={chatMessagesRef}>
-          {messages.map((message, index) => (
-            <Message 
-              key={index} 
-              message={message} 
-              isMe={message.sender === userInfo.name}
-              unreadCount={getUnreadCount(message.time)}
-            />
-          ))}
+        <div className="chat-messages-container">
+          <div className="chat-messages" ref={chatMessagesRef}>
+            {messages.map((message, index) => (
+              <Message 
+                key={index} 
+                message={message} 
+                isMe={message.sender === userInfo.name}
+                unreadCount={getUnreadCount(message.time)}
+              />
+            ))}
+          </div>
+          {showScrollButton && (
+            <button 
+              className="scroll-to-bottom"
+              onClick={() => scrollToBottom()}
+              title="맨 아래로 이동"
+            >
+              ↓
+            </button>
+          )}
         </div>
         <ChatInputForm onSubmit={handleMessageSubmit} />
       </div>
