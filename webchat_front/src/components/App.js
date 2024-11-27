@@ -110,7 +110,7 @@ function App() {
         });
 
         // 유저 상태 변경 구독
-        client.subscribe('/topic/user.status', (message) => {
+        client.subscribe('/topic/status', (message) => {
           try {
             const statusUpdate = JSON.parse(message.body);
             // FriendsList 컴포넌트에 상태 업데이트를 전달하기 위한 이벤트 발생

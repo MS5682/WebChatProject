@@ -2,6 +2,7 @@ package com.sms.webchat.controller;
 
 import com.sms.webchat.dto.MessageDTO;
 import com.sms.webchat.entity.ChatRoom;
+import com.sms.webchat.entity.Message;
 import com.sms.webchat.entity.User;
 import com.sms.webchat.service.ChatRoomService;
 import com.sms.webchat.service.MessageService;
@@ -32,8 +33,10 @@ public class ChatController {
                                  @DestinationVariable String roomId) {
         User sender = userService.findByName(messageDTO.getSender());
         ChatRoom room = chatRoomService.findById(Long.parseLong(messageDTO.getRoomId()));
-
-        messageService.saveMessage(messageDTO.toEntity(sender, room));
-        return messageDTO;
+        
+        Message savedMessage = messageService.saveMessage(messageDTO.toEntity(sender, room));
+        chatRoomService.updateLastReadTime(Long.parseLong(roomId), sender.getIdx());
+        
+        return MessageDTO.fromEntity(savedMessage);
     }
 } 

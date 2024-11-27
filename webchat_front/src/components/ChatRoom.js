@@ -60,6 +60,30 @@ function useChatRoom(userInfo) {
     }
   }, [roomId, userInfo.userIdx]);
 
+
+  const fetchUnreadMessages = useCallback(async () => {
+    if (!userInfo || !userInfo.userIdx) {
+      console.log('사용자 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/chat-rooms/${roomId}/unread-messages?userIdx=${userInfo.userIdx}`);
+      if (!response.ok) {
+        throw new Error('읽지 않은 메시지 로드 실패');
+      }
+      const unreadMessages = await response.json();
+      
+      setMessages(prevMessages => [...prevMessages, ...unreadMessages]);
+      
+      if (unreadMessages.length > 0) {
+        await updateLastReadTime();
+      }
+    } catch (error) {
+      console.error('읽지 않은 메시지 처리 중 오류:', error);
+    }
+  }, [roomId, userInfo]);
+
   const connectWebSocket = useCallback((user) => {
     const client = new Client({
       brokerURL: 'ws://localhost:8080/ws',
@@ -90,8 +114,7 @@ function useChatRoom(userInfo) {
                 setMessages(prevMessages => [...prevMessages, {
                   type: 'NOTIFICATION',
                   content: `${receivedMessage.sender}님이 입장하셨습니다.`,
-                  sender: 'system',
-                  time: new Date().toISOString()
+                  sender: 'system'
                 }]);
                 fetchParticipants();
                 break;
@@ -100,8 +123,7 @@ function useChatRoom(userInfo) {
                 setMessages(prevMessages => [...prevMessages, {
                   type: 'NOTIFICATION',
                   content: `${receivedMessage.sender}님이 퇴장하셨습니다.`,
-                  sender: 'system',
-                  time: new Date().toISOString()
+                  sender: 'system'
                 }]);
                 fetchParticipants();
                 break;
@@ -154,20 +176,23 @@ function useChatRoom(userInfo) {
         type: 'CHAT',
         content: message,
         sender: userInfo.name,
-        roomId: roomId,
-        time: new Date().toISOString()
+        roomId: roomId
       };
 
-      clientRef.current.publish({
-        destination: `/app/chat.room/${roomId}/send`,
-        body: JSON.stringify(messageData)
+      // 메시지 전송 후 응답을 기다림
+      await new Promise((resolve, reject) => {
+        clientRef.current.publish({
+          destination: `/app/chat.room/${roomId}/send`,
+          body: JSON.stringify(messageData),
+          headers: {},
+          onReceive: resolve,  // 메시지가 서버에 도달했을 때
+          onError: reject      // 에러 발생 시
+        });
       });
-
-      await updateLastReadTime();
     } catch (error) {
       console.error('메시지 전송 중 오류:', error);
     }
-  }, [userInfo.name, roomId, updateLastReadTime]);
+  }, [userInfo.name, roomId]);
 
   const handleMouseDown = (e) => {
     isResizing.current = true;
@@ -202,16 +227,15 @@ function useChatRoom(userInfo) {
 
   const initializeRoom = useCallback(async () => {
     try {
-      if (userInfo?.name) {
+      if (userInfo?.userIdx) {
         await connectWebSocket(userInfo.name);
+        await fetchParticipants();
+        await fetchUnreadMessages();
       }
-      
-      await fetchParticipants();
-      
     } catch (error) {
       console.error('채팅방 초기화 중 오류:', error);
     }
-  }, [userInfo, connectWebSocket, fetchParticipants]);
+  }, [userInfo, connectWebSocket, fetchParticipants, fetchUnreadMessages]);
 
   useEffect(() => {
     initializeRoom();

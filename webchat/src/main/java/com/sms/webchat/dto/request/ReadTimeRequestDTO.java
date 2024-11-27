@@ -8,4 +8,5 @@ import lombok.Setter;
 public class ReadTimeRequestDTO {
     private Long roomId;
     private Long userIdx;
+    private String lastReadTime;
 } 

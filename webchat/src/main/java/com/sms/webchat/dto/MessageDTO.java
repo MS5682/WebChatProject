@@ -10,9 +10,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import com.sms.webchat.entity.ChatRoom;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 @Getter @Setter
 @NoArgsConstructor
@@ -31,9 +28,6 @@ public class MessageDTO {
             .content(this.content)
             .sender(sender)
             .room(room)
-            .createdAt(LocalDateTime.ofInstant(
-                Instant.parse(this.time), 
-                ZoneId.systemDefault()))
             .build();
     }
     
