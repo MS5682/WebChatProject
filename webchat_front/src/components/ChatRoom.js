@@ -12,9 +12,6 @@ function useChatRoom(userInfo) {
     const cached = localStorage.getItem(`chat-messages-${roomId}`);
     return cached ? JSON.parse(cached) : [];
   });
-  const [newMessage, setNewMessage] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
   const [userListWidth, setUserListWidth] = useState(200);
   const [participants, setParticipants] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
@@ -26,7 +23,6 @@ function useChatRoom(userInfo) {
   const [showScrollButton, setShowScrollButton] = useState(false);
   
   const clientRef = useRef(null);
-  const messagesEndRef = useRef(null);
   const chatMessagesRef = useRef(null);
   const isResizing = useRef(false);
   const startX = useRef(0);
@@ -128,7 +124,6 @@ function useChatRoom(userInfo) {
       heartbeatOutgoing: 4000,
       onConnect: () => {
         console.log('WebSocket 연결 성공');
-        setIsConnected(true);
         
         client.subscribe('/topic/status', (message) => {
           try {
@@ -191,7 +186,6 @@ function useChatRoom(userInfo) {
       },
       onDisconnect: () => {
         console.log('WebSocket 연결 해제');
-        setIsConnected(false);
       },
       onStompError: (frame) => {
         console.error('STOMP error:', frame);
@@ -213,7 +207,6 @@ function useChatRoom(userInfo) {
       clientRef.current = client;
     } catch (error) {
       console.error('Connection error:', error);
-      setIsConnected(false);
     }
   }, [roomId, userInfo.name, updateLastReadTime]);
 
@@ -271,6 +264,13 @@ function useChatRoom(userInfo) {
     }
   }, []);
 
+  const scrollToBottomInstantly = useCallback(() => {
+    const chatMessages = chatMessagesRef.current;
+    if (chatMessages) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }, []);
+
   const getUnreadCount = useCallback((messageTime) => {
     if (!participants || !lastReadTimes) return 0;
     
@@ -313,7 +313,7 @@ function useChatRoom(userInfo) {
 
   useEffect(() => {
     if (isFirstLoad.current) {
-      scrollToBottom();
+      scrollToBottomInstantly();
       isFirstLoad.current = false;
     } else {
       const { scrollHeight, scrollTop, clientHeight } = chatMessagesRef.current;
@@ -443,7 +443,8 @@ function useChatRoom(userInfo) {
     searchResults,
     currentSearchIndex,
     showScrollButton,
-    scrollToBottom
+    scrollToBottom,
+    scrollToBottomInstantly,
   };
 }
 
@@ -593,20 +594,6 @@ const SearchBar = ({
   );
 };
 
-// 맨 아래로 이동 버튼 컴포넌트
-const ScrollToBottomButton = ({ show, onClick }) => {
-  if (!show) return null;
-
-  return (
-    <button 
-      className="scroll-to-bottom"
-      onClick={onClick}
-      title="맨 아래로 이동"
-    >
-      ↓
-    </button>
-  );
-};
 
 function ChatRoom({ userInfo }) {
   const {
@@ -628,7 +615,8 @@ function ChatRoom({ userInfo }) {
     searchResults,
     currentSearchIndex,
     showScrollButton,
-    scrollToBottom
+    scrollToBottom,
+    scrollToBottomInstantly,
   } = useChatRoom(userInfo);
 
   return (
