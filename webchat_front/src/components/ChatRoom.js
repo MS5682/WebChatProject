@@ -19,6 +19,10 @@ function useChatRoom(userInfo) {
   const [participants, setParticipants] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [lastReadTimes, setLastReadTimes] = useState({});
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
   
   const clientRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -325,6 +329,71 @@ function useChatRoom(userInfo) {
     }
   }, [messages]);
 
+  // 검색 기능
+  const handleSearch = useCallback((query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setCurrentSearchIndex(-1);
+      return;
+    }
+
+    const results = messages
+      .map((msg, index) => {
+        if (msg.type === 'CHAT' && msg.content.toLowerCase().includes(query.toLowerCase())) {
+          return index;
+        }
+        return null;
+      })
+      .filter(index => index !== null);
+
+    setSearchResults(results);
+    setCurrentSearchIndex(results.length > 0 ? 0 : -1);
+
+    if (results.length > 0) {
+      scrollToMessage(results[0]);
+    }
+  }, [messages]);
+
+  // 메시지로 스크롤
+  const scrollToMessage = useCallback((messageIndex) => {
+    const messageElements = chatMessagesRef.current.children;
+    if (messageElements[messageIndex]) {
+      messageElements[messageIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      messageElements[messageIndex].classList.add('highlight');
+      setTimeout(() => {
+        messageElements[messageIndex].classList.remove('highlight');
+      }, 2000);
+    }
+  }, []);
+
+  // 다음/이전 검색 결과로 이동
+  const navigateSearch = useCallback((direction) => {
+    if (searchResults.length === 0) return;
+
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (currentSearchIndex + 1) % searchResults.length;
+    } else {
+      newIndex = (currentSearchIndex - 1 + searchResults.length) % searchResults.length;
+    }
+
+    setCurrentSearchIndex(newIndex);
+    scrollToMessage(searchResults[newIndex]);
+  }, [searchResults, currentSearchIndex, scrollToMessage]);
+
+  // 키보드 단축키 처리
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        setIsSearchOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return {
     messages,
     participants,
@@ -334,7 +403,15 @@ function useChatRoom(userInfo) {
     handleMouseDown,
     navigate,
     onlineUsers,
-    getUnreadCount
+    getUnreadCount,
+    isSearchOpen,
+    setIsSearchOpen,
+    searchQuery,
+    setSearchQuery,
+    handleSearch,
+    navigateSearch,
+    searchResults,
+    currentSearchIndex
   };
 }
 
@@ -447,6 +524,43 @@ const ParticipantList = ({ participants, userInfo, onlineUsers }) => {
   );
 };
 
+// 검색 컴포넌트
+const SearchBar = ({ 
+  isOpen, 
+  onClose, 
+  searchQuery, 
+  setSearchQuery, 
+  onSearch,
+  onNavigate,
+  resultCount,
+  currentIndex
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="search-bar">
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => {
+          setSearchQuery(e.target.value);
+          onSearch(e.target.value);
+        }}
+        placeholder="메시지 검색..."
+        autoFocus
+      />
+      {resultCount > 0 && (
+        <div className="search-navigation">
+          <span>{currentIndex + 1} / {resultCount}</span>
+          <button onClick={() => onNavigate('prev')}>↑</button>
+          <button onClick={() => onNavigate('next')}>↓</button>
+        </div>
+      )}
+      <button className="close-search" onClick={onClose}>✕</button>
+    </div>
+  );
+};
+
 function ChatRoom({ userInfo }) {
   const {
     messages,
@@ -457,7 +571,15 @@ function ChatRoom({ userInfo }) {
     handleMouseDown,
     navigate,
     onlineUsers,
-    getUnreadCount
+    getUnreadCount,
+    isSearchOpen,
+    setIsSearchOpen,
+    searchQuery,
+    setSearchQuery,
+    handleSearch,
+    navigateSearch,
+    searchResults,
+    currentSearchIndex
   } = useChatRoom(userInfo);
 
   return (
@@ -479,8 +601,29 @@ function ChatRoom({ userInfo }) {
             <FiArrowLeft /> 뒤로가기
           </button>
           <h2>채팅방</h2>
-          <span className="user-info"></span>
+          <button 
+            className="search-button" 
+            onClick={() => setIsSearchOpen(true)}
+            title="메시지 검색 (Ctrl+F)"
+          >
+            🔍
+          </button>
         </div>
+        {isSearchOpen && (
+          <SearchBar
+            isOpen={isSearchOpen}
+            onClose={() => {
+              setIsSearchOpen(false);
+              setSearchQuery('');
+            }}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onSearch={handleSearch}
+            onNavigate={navigateSearch}
+            resultCount={searchResults.length}
+            currentIndex={currentSearchIndex}
+          />
+        )}
         <div className="chat-messages" ref={chatMessagesRef}>
           {messages.map((message, index) => (
             <Message 
