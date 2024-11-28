@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import com.sms.webchat.security.JwtTokenProvider;
+import com.sms.webchat.mapper.UserMapper;
 
 @RestController
 @RequestMapping("/user")
@@ -21,12 +22,13 @@ public class UserController {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserMapper userMapper;
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequestDto request) {
         try {
             String encodedPassword = passwordEncoder.encode(request.getPassword());
-            User user = request.toEntity(encodedPassword);
+            User user = userMapper.toEntity(request, encodedPassword);
             userService.signup(user);
             
             return ResponseEntity.ok().body(new ApiResponseDto(true, "회원가입이 완료되었습니다."));

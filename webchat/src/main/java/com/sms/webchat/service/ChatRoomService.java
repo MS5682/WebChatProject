@@ -12,7 +12,6 @@ import com.sms.webchat.repository.ChatRoomRepository;
 import com.sms.webchat.repository.RoomParticipantRepository;
 import com.sms.webchat.entity.RoomParticipant;
 import com.sms.webchat.dto.MessageDTO;
-import com.sms.webchat.entity.Message;
 import com.sms.webchat.repository.MessageRepository;
 import com.sms.webchat.dto.ReadStatusMessage;
 
@@ -32,7 +31,7 @@ public class ChatRoomService {
     private final RoomParticipantRepository roomParticipantRepository;
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate messagingTemplate;
-    
+
     public List<ChatRoomListDTO> getChatRoomsByUserIdx(Long userIdx) {
         return chatRoomRepository.findChatRoomsByUserIdx(userIdx);
     }
@@ -74,15 +73,8 @@ public class ChatRoomService {
         if (lastReadTime == null) {
             lastReadTime = participant.getJoinedAt(); // 참여 시점부터의 메시지 조회
         }
-        
-        // 마지막으로 읽은 시간 이후의 메시지들 조회
-        List<Message> unreadMessages = messageRepository.findByRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(
-            roomId, lastReadTime);
-        
-        // Entity를 DTO로 변환
-        return unreadMessages.stream()
-            .map(MessageDTO::fromEntity)
-            .collect(Collectors.toList());
+        List<MessageDTO> unreadMessages = messageRepository.findMessagesWithAttachments(roomId, lastReadTime);
+        return unreadMessages;
     }
 
     @Transactional(readOnly = true)

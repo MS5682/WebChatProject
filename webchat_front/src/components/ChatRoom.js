@@ -138,33 +138,12 @@ function useChatRoom(userInfo) {
 
         client.subscribe(`/topic/room/${roomId}`, (message) => {
           try {
+            console.log(message);
             const receivedMessage = JSON.parse(message.body);
             
-            switch(receivedMessage.type) {
-              case 'JOIN':
-                setMessages(prevMessages => [...prevMessages, {
-                  type: 'NOTIFICATION',
-                  content: `${receivedMessage.sender}님이 입장하셨습니다.`,
-                  sender: 'system'
-                }]);
-                fetchParticipants();
-                break;
-                
-              case 'LEAVE':
-                setMessages(prevMessages => [...prevMessages, {
-                  type: 'NOTIFICATION',
-                  content: `${receivedMessage.sender}님이 퇴장하셨습니다.`,
-                  sender: 'system'
-                }]);
-                fetchParticipants();
-                break;
-                
-              case 'CHAT':
-                if (receivedMessage.sender !== userInfo.name) {
-                  setMessages(prevMessages => [...prevMessages, receivedMessage]);
-                  updateLastReadTime();
-                }
-                break;
+            if (receivedMessage.sender !== userInfo.name) {
+              setMessages(prevMessages => [...prevMessages, receivedMessage]);
+              updateLastReadTime();
             }
           } catch (error) {
             console.error('메시지 처리 중 오류:', error);
@@ -233,55 +212,49 @@ function useChatRoom(userInfo) {
     }, 100);
   }, [userInfo.name, roomId, updateLastReadTime]);
 
-  const handleMouseDown = (e) => {
+  const handleMouseDown = useCallback((e) => {
     isResizing.current = true;
     startX.current = e.clientX;
     startWidth.current = userListWidth;
+
+    const handleMouseMove = (e) => {
+      if (!isResizing.current) return;
+      const delta = e.clientX - startX.current;
+      const newWidth = Math.max(200, Math.min(400, startWidth.current + delta));
+      setUserListWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  };
+  }, [userListWidth]);
 
-  const handleMouseMove = (e) => {
-    if (!isResizing.current) return;
-    const diff = e.clientX - startX.current;
-    const newWidth = Math.max(150, Math.min(400, startWidth.current + diff));
-    setUserListWidth(newWidth);
-  };
-
-  const handleMouseUp = () => {
-    isResizing.current = false;
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
-
-  const scrollToBottom = useCallback((behavior = 'smooth') => {
-    const chatMessages = chatMessagesRef.current;
-    if (chatMessages) {
-      chatMessages.scrollTo({
-        top: chatMessages.scrollHeight,
-        behavior
+  const scrollToBottom = useCallback(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTo({
+        top: chatMessagesRef.current.scrollHeight,
+        behavior: 'smooth'
       });
     }
   }, []);
 
   const scrollToBottomInstantly = useCallback(() => {
-    const chatMessages = chatMessagesRef.current;
-    if (chatMessages) {
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
     }
   }, []);
 
   const getUnreadCount = useCallback((messageTime) => {
-    if (!participants || !lastReadTimes) return 0;
-    
-    return participants.reduce((count, participant) => {
-      const lastReadTime = lastReadTimes[participant.userIdx];
-      if (!lastReadTime || new Date(messageTime) > new Date(lastReadTime)) {
-        return count + 1;
-      }
-      return count;
-    }, 0);
-  }, [participants, lastReadTimes]);
+    const readCount = Object.values(lastReadTimes).filter(time => 
+      new Date(time) >= new Date(messageTime)
+    ).length;
+    return participants.length - readCount;
+  }, [lastReadTimes, participants]);
 
   const initializeRoom = useCallback(async () => {
     try {
@@ -373,7 +346,8 @@ function useChatRoom(userInfo) {
     if (direction === 'next') {
       newIndex = (currentSearchIndex + 1) % searchResults.length;
     } else {
-      newIndex = (currentSearchIndex - 1 + searchResults.length) % searchResults.length;
+      newIndex = currentSearchIndex - 1;
+      if (newIndex < 0) newIndex = searchResults.length - 1;
     }
 
     setCurrentSearchIndex(newIndex);
@@ -382,16 +356,19 @@ function useChatRoom(userInfo) {
 
   // 키보드 단축키 처리
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyPress = (e) => {
       if (e.ctrlKey && e.key === 'f') {
         e.preventDefault();
-        setIsSearchOpen(prev => !prev);
+        setIsSearchOpen(true);
+      } else if (e.key === 'Escape' && isSearchOpen) {
+        setIsSearchOpen(false);
+        setSearchQuery('');
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [isSearchOpen]);
 
   // 스크롤 위치 감지
   useEffect(() => {
@@ -424,6 +401,76 @@ function useChatRoom(userInfo) {
     };
   }, []);
 
+  // 파일 전송 함수 추가
+  const handleFileUpload = useCallback(async (file) => {
+    // FormData 생성 및 데이터 추가 전에 콘솔 로그
+    console.log('업로드할 파일:', file);
+    console.log('roomId:', roomId);
+    console.log('sender:', userInfo.name);
+
+    const formData = new FormData();
+    
+    // 각 append 후에 확인을 위한 콘솔 로그 추가
+    formData.append('file', file);
+    console.log('file append 후:', formData.get('file'));
+    
+    formData.append('roomId', roomId);
+    console.log('roomId append 후:', formData.get('roomId'));
+    
+    formData.append('sender', userInfo.name);
+    console.log('sender append 후:', formData.get('sender'));
+
+    // FormData 전체 내용 확인
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+
+    try {
+      const response = await fetch('/chat/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('업로드 실패:', errorData);
+        throw new Error('파일 업로드 실패');
+      }
+      
+      const fileData = await response.json();
+      console.log('업로드 성공:', fileData);
+      
+      // 웹소켓으로 메시지 전송
+      if (clientRef.current) {
+        const messageData = {
+          type: 'FILE',
+          content: fileData.fileName,
+          fileName: fileData.fileName,
+          fileUrl: fileData.fileUrl,
+          fileType: fileData.fileType,
+          sender: userInfo.name,
+          roomId: roomId,
+          time: new Date().toISOString()
+        };
+        setMessages(prevMessages => [...prevMessages, messageData]);
+
+        await Promise.resolve(clientRef.current.publish({
+          destination: `/app/chat.room/${roomId}/send`,
+          body: JSON.stringify(messageData)
+        }));
+    
+        setTimeout(async () => {
+          await updateLastReadTime();
+        }, 100);
+      }
+
+    } catch (error) {
+      console.error('파일 업로드 중 오류:', error);
+      alert('파일 업로드에 실패했습니다.');
+    }
+  }, [roomId, userInfo.name, updateLastReadTime]);
+
   return {
     messages,
     participants,
@@ -445,10 +492,11 @@ function useChatRoom(userInfo) {
     showScrollButton,
     scrollToBottom,
     scrollToBottomInstantly,
+    handleFileUpload,
   };
 }
 
-const ChatInputForm = React.memo(({ onSubmit }) => {
+const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
 
@@ -459,6 +507,20 @@ const ChatInputForm = React.memo(({ onSubmit }) => {
     onSubmit(inputMessage, selectedFile);
     setInputMessage('');
     setSelectedFile(null);
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert('파일 크기는 10MB를 초과할 수 없습니다.');
+      return;
+    }
+    
+    await onFileUpload(file);
+    e.target.value = ''; // 입력 초기화
   };
 
   return (
@@ -474,11 +536,20 @@ const ChatInputForm = React.memo(({ onSubmit }) => {
       <div className="chat-input-buttons">
         <label className="upload-button" title="파일 첨부">
           <FiPaperclip />
-          <input type="file" hidden />
+          <input 
+            type="file" 
+            hidden 
+            onChange={handleFileChange}
+          />
         </label>
         <label className="upload-button" title="이미지 첨부">
           <FiImage />
-          <input type="file" accept="image/*" hidden />
+          <input 
+            type="file" 
+            accept="image/*" 
+            hidden 
+            onChange={handleFileChange}
+          />
         </label>
       </div>
       <button type="submit">전송</button>
@@ -487,6 +558,27 @@ const ChatInputForm = React.memo(({ onSubmit }) => {
 });
 
 const Message = ({ message, isMe, unreadCount }) => {
+  const handleDownload = async (fileUrl, fileName) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      
+      // 다운로드 링크 생성
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName; // 원본 파일명으로 다운로드
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('파일 다운로드 중 오류:', error);
+      alert('파일 다운로드에 실패했습니다.');
+    }
+  };
+
   const renderContent = () => {
     switch (message.type) {
       case 'NOTIFICATION':
@@ -497,8 +589,30 @@ const Message = ({ message, isMe, unreadCount }) => {
           </div>
         );
       case 'CHAT':
-      default:
         return <div className="message-content">{message.content}</div>;
+      case 'FILE':
+        return (
+          <div className="message-file">
+            {message.fileType.startsWith('image/') ? (
+              // 이미지 클릭시 새 탭에서 열기
+              <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
+                <img src={message.fileUrl} alt={message.content} className="message-image" />
+              </a>
+            ) : (
+              // 일반 파일은 클릭시 다운로드
+              <div 
+                className="file-download"
+                onClick={() => handleDownload(message.fileUrl, message.content)}
+                style={{ cursor: 'pointer' }}
+              >
+                📎 {message.content}
+                <span className="download-icon">⬇️</span>
+              </div>
+            )}
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -617,6 +731,7 @@ function ChatRoom({ userInfo }) {
     showScrollButton,
     scrollToBottom,
     scrollToBottomInstantly,
+    handleFileUpload,
   } = useChatRoom(userInfo);
 
   return (
@@ -682,7 +797,7 @@ function ChatRoom({ userInfo }) {
             </button>
           )}
         </div>
-        <ChatInputForm onSubmit={handleMessageSubmit} />
+        <ChatInputForm onSubmit={handleMessageSubmit} onFileUpload={handleFileUpload} />
       </div>
     </div>
   );

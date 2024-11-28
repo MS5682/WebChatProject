@@ -19,7 +19,6 @@ public class MessageAttachment {
     private Message message;
     
     private String url;
-    private String originalName;
-    private Long size;
+    private String name;
     private String type;
 } 
