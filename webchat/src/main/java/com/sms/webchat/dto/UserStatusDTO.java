@@ -1,4 +1,4 @@
-package com.sms.webchat.model;
+package com.sms.webchat.dto;
 
 import lombok.Data;
 import lombok.Builder;
@@ -10,7 +10,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserStatus {
+public class UserStatusDTO {
     private String userIdx;
     private String status; // "ONLINE" or "OFFLINE"
     private List<String> onlineUsers;

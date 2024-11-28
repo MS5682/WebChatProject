@@ -1,6 +1,6 @@
 package com.sms.webchat.controller;
 
-import com.sms.webchat.model.UserStatus;
+import com.sms.webchat.dto.UserStatusDTO;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -8,7 +8,7 @@ import org.springframework.stereotype.Controller;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.ArrayList;
-
+    
 @Controller
 public class UserStatusController {
     
@@ -16,7 +16,7 @@ public class UserStatusController {
     
     @MessageMapping("/user.status")
     @SendTo("/topic/status")
-    public UserStatus handleUserStatus(@Payload UserStatus userStatus) {
+    public UserStatusDTO handleUserStatus(@Payload UserStatusDTO userStatus) {
         if ("ONLINE".equals(userStatus.getStatus())) {
             onlineUsers.add(userStatus.getUserIdx());
         } else if ("OFFLINE".equals(userStatus.getStatus())) {

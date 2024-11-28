@@ -12,6 +12,8 @@ import com.sms.webchat.service.MessageService;
 import com.sms.webchat.service.UserService;
 import com.sms.webchat.service.MessageAttachmentService;
 import com.sms.webchat.mapper.MessageMapper;
+import com.sms.webchat.service.FileService;
+import com.sms.webchat.dto.response.FileResponseDto;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -26,18 +28,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
-import java.util.UUID;
 
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Controller
 @RequiredArgsConstructor
@@ -48,6 +42,7 @@ public class ChatController {
     private final MessageAttachmentService messageAttachmentService;
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageMapper messageMapper;
+    private final FileService fileService;
     
     @Value("${file.upload.dir}")
     private String uploadDir;
@@ -97,40 +92,15 @@ public class ChatController {
     
     @PostMapping("/chat/upload")
     @ResponseBody
-    public ResponseEntity<FileResponse> uploadFile(
+    public ResponseEntity<FileResponseDto> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam("roomId") String roomId,
             @RequestParam("sender") String sender) {
         try {
-            
-            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-            
-            File directory = new File(uploadDir + "/" + roomId);
-            if (!directory.exists()) {
-                directory.mkdirs();
-            }
-            
-            Path filePath = Paths.get(directory.getAbsolutePath(), fileName);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            
-            String fileUrl = "/files/" + roomId + "/" + fileName;
-            
-            return ResponseEntity.ok(new FileResponse(
-                file.getOriginalFilename(),
-                fileUrl,
-                file.getContentType()
-            ));
-            
+            FileResponseDto response = fileService.uploadFile(file, roomId);
+            return ResponseEntity.ok(response);
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
-
-@Data
-@AllArgsConstructor
-class FileResponse {
-    private String fileName;
-    private String fileUrl;
-    private String fileType;
-} 
