@@ -244,7 +244,11 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/find-id" element={<FindId />} />
             <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/friend-requests" element={<FriendRequests />} />
+            <Route path="/friend-requests" element={
+              <FriendRequests 
+              isLoggedIn={isLoggedIn} 
+              userInfo={userInfo}
+              />} />
           </Routes>
         </div>
         {isLoggedIn && (

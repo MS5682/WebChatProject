@@ -74,7 +74,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  width: calc(100% - 80px);
+  width: calc(100% - 300px);
 }
 
 .friend-avatar {

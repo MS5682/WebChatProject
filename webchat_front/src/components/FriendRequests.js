@@ -1,68 +1,271 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/FriendRequests.css';
 
-function FriendRequests() {
+function FriendRequests({ userInfo, isLoggedIn }) {
   const [activeTab, setActiveTab] = useState('friends');
   const [receivedRequests, setReceivedRequests] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
   const [friends, setFriends] = useState([]);
+  const [searchUserId, setSearchUserId] = useState('');
+  const [searchResult, setSearchResult] = useState(null);
+  const [searchError, setSearchError] = useState('');
 
   useEffect(() => {
-    // 임시 데이터로 테스트
-    setReceivedRequests([
-      { id: 1, username: '김철수', timestamp: new Date() },
-      { id: 2, username: '이영희', timestamp: new Date() }
-    ]);
+    if (isLoggedIn && userInfo) {
+      fetchFriendships();
+    }
+  }, [isLoggedIn, userInfo]);
 
-    setSentRequests([
-      { id: 3, username: '박지성', timestamp: new Date(), status: 'pending' },
-      { id: 4, username: '손흥민', timestamp: new Date(), status: 'pending' }
-    ]);
+  const fetchFriendships = async () => {
+    try {
+      const response = await fetch(`/friendship/list/${userInfo.userIdx}`);
+      const friendships = await response.json();
+      
+      const newFriends = [];
+      const newReceivedRequests = [];
+      const newSentRequests = [];
 
-    // 친구 목록 임시 데이터
-    setFriends([
-      { id: 5, username: '강감찬', status: 'offline' },
-      { id: 6, username: '이순신', status: 'online' },
-      { id: 7, username: '세종대왕', status: 'offline' },
-      { id: 8, username: '장영실', status: 'online' }
-    ]);
-  }, []);
+      friendships.forEach(friendship => {
+        if (friendship.status === 'ACCEPTED') {
+          const friend = {
+            id: friendship.id,
+            username: friendship.fromUserIdx === userInfo.userIdx 
+              ? friendship.toUserName 
+              : friendship.fromUserName,
+            userId: friendship.fromUserIdx === userInfo.userIdx 
+              ? friendship.toUserId 
+              : friendship.fromUserId,
+            status: 'offline'
+          };
+          newFriends.push(friend);
+        } else if (friendship.status === 'PENDING') {
+          const request = {
+            id: friendship.id,
+            username: friendship.fromUserIdx === userInfo.userIdx 
+              ? friendship.toUserName 
+              : friendship.fromUserName,
+            userId: friendship.fromUserIdx === userInfo.userIdx 
+              ? friendship.toUserId 
+              : friendship.fromUserId,
+            timestamp: new Date(friendship.createdAt)
+          };
+          
+          if (friendship.toUserIdx === userInfo.userIdx) {
+            newReceivedRequests.push(request);
+          } else {
+            newSentRequests.push(request);
+          }
+        }
+      });
+
+      setFriends(newFriends);
+      setReceivedRequests(newReceivedRequests);
+      setSentRequests(newSentRequests);
+    } catch (error) {
+      console.error('친구 목록을 가져오는데 실패했습니다:', error);
+    }
+  };
 
   const handleAccept = async (requestId) => {
     try {
-      console.log('친구 요청 수락:', requestId);
-      setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
+      const response = await fetch(`/friendship/response?friendshipId=${requestId}&status=ACCEPTED`, {
+        method: 'POST'
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || '친구 요청 수락 실패');
+      }
+
+      if (result.success) {
+        // 받은 요청 목록에서 제거
+        const acceptedRequest = receivedRequests.find(req => req.id === requestId);
+        setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
+        
+        // 친구 목록에 추가
+        if (acceptedRequest) {
+          const newFriend = {
+            id: requestId,
+            username: acceptedRequest.username,
+            userId: acceptedRequest.userId,
+            status: 'offline'
+          };
+          setFriends(prev => [...prev, newFriend]);
+        }
+
+        // 선택적: 친구 목록 탭으로 이동
+        setActiveTab('friends');
+      }
     } catch (error) {
       console.error('친구 요청 수락 실패:', error);
+      alert('친구 요청 수락에 실패했습니다.');
     }
   };
 
   const handleReject = async (requestId) => {
     try {
-      console.log('친구 요청 거절:', requestId);
-      setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
+      const response = await fetch(`/friendship/response?friendshipId=${requestId}&status=REJECTED`, {
+        method: 'POST'
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || '친구 요청 거절 실패');
+      }
+
+      if (result.success) {
+        // 받은 요청 목록에서 제거
+        setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
+        alert('친구 요청을 거절했습니다.');
+      }
     } catch (error) {
       console.error('친구 요청 거절 실패:', error);
+      alert('친구 요청 거절에 실패했습니다.');
     }
   };
 
   const handleBlock = async (requestId) => {
     try {
-      console.log('사용자 차단:', requestId);
-      setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
+      const response = await fetch(`/friendship/response?friendshipId=${requestId}&status=BLOCKED`, {
+        method: 'POST'
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || '사용자 차단 실패');
+      }
+
+      if (result.success) {
+        // 받은 요청 목록에서 제거
+        setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
+        alert('사용자를 차단했습니다.');
+      }
     } catch (error) {
       console.error('사용자 차단 실패:', error);
+      alert('사용자 차단에 실패했습니다.');
     }
   };
 
-  const handleDeleteFriend = (friendId) => {
-    // API 호출 로직 추가 예정
-    setFriends(prev => prev.filter(friend => friend.id !== friendId));
+  const handleDeleteFriend = async (friendId) => {
+    try {
+      const response = await fetch(`/friendship/response?friendshipId=${friendId}&status=REJECTED`, {
+        method: 'POST'
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || '친구 삭제 실패');
+      }
+
+      if (result.success) {
+        // 친구 목록에서 제거
+        setFriends(prev => prev.filter(friend => friend.id !== friendId));
+        alert('친구를 삭제했습니다.');
+      }
+    } catch (error) {
+      console.error('친구 삭제 실패:', error);
+      alert('친구 삭제에 실패했습니다.');
+    }
   };
 
-  const handleBlockFriend = (friendId) => {
-    // API 호출 로직 추가 예정
-    setFriends(prev => prev.filter(friend => friend.id !== friendId));
+  const handleBlockFriend = async (friendId) => {
+    try {
+      const response = await fetch(`/friendship/response?friendshipId=${friendId}&status=BLOCKED`, {
+        method: 'POST'
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || '친구 차단 실패');
+      }
+
+      if (result.success) {
+        // 친구 목록에서 제거
+        setFriends(prev => prev.filter(friend => friend.id !== friendId));
+        alert('친구를 차단했습니다.');
+      }
+    } catch (error) {
+      console.error('친구 차단 실패:', error);
+      alert('친구 차단에 실패했습니다.');
+    }
+  };
+
+  const handleSearch = async () => {
+    try {
+      setSearchError('');
+      const response = await fetch(`/friendship/find?keyword=${searchUserId}`);
+      const users = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(users.message || '사용자를 찾을 수 없습니다.');
+      }
+
+      if (users.length > 0) {
+        // 친구가 아닌 첫 번째 사용자 찾기
+        const availableUser = users.find(user => {
+          const isAlreadyFriend = friends.some(friend => friend.userId === user.userId);
+          const isSelf = user.userId === userInfo.userId;
+          return !isAlreadyFriend && !isSelf;
+        });
+
+        if (availableUser) {
+          setSearchResult(availableUser);
+        } else {
+          setSearchError('추가 가능한 사용자가 없습니다.');
+          setSearchResult(null);
+        }
+      } else {
+        setSearchError('사용자를 찾을 수 없습니다.');
+        setSearchResult(null);
+      }
+    } catch (error) {
+      setSearchError(error.message);
+      setSearchResult(null);
+    }
+  };
+
+  const handleAddFriend = async () => {
+    try {
+      if (!searchResult) return;
+      
+      const response = await fetch(`/friendship/request?fromUserIdx=${userInfo.userIdx}&toUserIdx=${searchResult.idx}`, {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || '친구 요청 실패');
+      }
+
+      // 성공적으로 요청을 보냈다면
+      if (result.success) {
+        // 검색 결과를 sent requests에 추가
+        const newRequest = {
+          id: result.friendshipId,
+          username: searchResult.name,
+          userId: searchResult.userId,
+          timestamp: new Date()
+        };
+        setSentRequests(prev => [...prev, newRequest]);
+        
+        // 검색 결과 초기화
+        setSearchResult(null);
+        setSearchUserId('');
+        
+        // 성공 메시지 표시 (선택사항)
+        setSearchError('');
+        alert('친구 요청을 보냈습니다.');
+      }
+    } catch (error) {
+      console.error('친구 추가 실패:', error);
+      setSearchError(error.message);
+    }
   };
 
   const renderContent = () => {
@@ -86,7 +289,7 @@ function FriendRequests() {
                       </div>
                     </div>
                     <div className="friend-actions">
-                      <button className="chat-btn">1:1 채팅</button>
+                      <button className="chat-btn">채팅</button>
                       <button 
                         className="delete-btn"
                         onClick={() => handleDeleteFriend(friend.id)}
@@ -104,6 +307,43 @@ function FriendRequests() {
                 ))}
               </ul>
             )}
+            
+            {/* 친구 검색 섹션 추가 */}
+            <div className="friend-search-section">
+              <h3>친구 추가</h3>
+              <div className="search-container">
+                <input
+                  type="text"
+                  value={searchUserId}
+                  onChange={(e) => setSearchUserId(e.target.value)}
+                  placeholder="친구의 ID를 입력하세요"
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                />
+                <button onClick={handleSearch}>검색</button>
+              </div>
+              
+              {searchError && (
+                <p className="search-error">{searchError}</p>
+              )}
+              
+              {searchResult && (
+                <div className="search-result">
+                  <div className="user-info">
+                    <div className="friend-avatar"></div>
+                    <div className="friend-details">
+                      <span className="username">{searchResult.name}</span>
+                      <span className="user-id">@{searchResult.userId}</span>
+                    </div>
+                  </div>
+                  <button 
+                    className="add-friend-btn"
+                    onClick={handleAddFriend}
+                  >
+                    친구 추가
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         );
       case 'received':

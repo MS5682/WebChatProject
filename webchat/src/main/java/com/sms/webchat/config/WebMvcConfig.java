@@ -33,7 +33,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
             "/ws/**",              
             "/chat-rooms/**",
             "/chat/upload/**",
-            "/files/**"
+            "/files/**",
+            "/friendship/**"
         );
 
     }

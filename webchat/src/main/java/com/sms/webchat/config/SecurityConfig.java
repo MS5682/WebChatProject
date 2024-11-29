@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .requestMatchers("/chat-rooms/**").permitAll()
                 .requestMatchers("/chat/upload/**").permitAll()
                 .requestMatchers("/files/**").permitAll()
+                .requestMatchers("/friendship/**").permitAll()
                 .anyRequest().authenticated()
             );
         

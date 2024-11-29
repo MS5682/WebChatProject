@@ -1,5 +1,7 @@
 package com.sms.webchat.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -7,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sms.webchat.entity.User;
 import com.sms.webchat.repository.UserRepository;
+import com.sms.webchat.dto.UserDTO;
+import com.sms.webchat.mapper.UserMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,6 +22,7 @@ public class UserService {
     @Autowired
     private EmailVerificationService emailVerificationService;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
     public void signup(User user) {
         // 아이디 중복 체크
@@ -86,5 +91,10 @@ public class UserService {
     public User findByName(String name) {
         return userRepository.findByName(name)
             .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+    }
+
+    public List<UserDTO> findUsersByIdLike(String keyword) {
+        List<User> users = userRepository.findByUserIdContaining(keyword);
+        return userMapper.toDtoList(users);
     }
 } 
