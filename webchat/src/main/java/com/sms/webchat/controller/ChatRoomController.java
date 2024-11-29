@@ -1,6 +1,7 @@
 package com.sms.webchat.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -75,6 +76,18 @@ public class ChatRoomController {
             return ResponseEntity.ok(lastReadTimes);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @DeleteMapping("/{roomId}/quit/{userIdx}")
+    public ResponseEntity<?> quitChatRoom(
+            @PathVariable Long roomId,
+            @PathVariable Long userIdx) {
+        try {
+            chatRoomService.quitChatRoom(roomId, userIdx);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponseDto(false, e.getMessage()));
         }
     }
 }

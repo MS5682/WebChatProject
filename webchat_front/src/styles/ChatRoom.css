@@ -3,6 +3,7 @@
   height: calc(100vh - 180px);
   background-color: #f8f9fa;
   position: relative;
+  padding-top: 30px;
 }
 
 .user-list {
@@ -565,4 +566,60 @@
 .scroll-to-bottom:hover {
   background-color: #0056b3;
   transform: translateX(-50%) translateY(-2px);
+}
+
+.header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.quit-button {
+  padding: 5px 10px;
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.quit-button:hover {
+  background-color: #cc0000;
+}
+
+.read-only-banner {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 6px 12px;
+  text-align: center;
+  border-bottom: 1px solid #ffeeba;
+  font-size: 13px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.inactive-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.chat-room-card-link.inactive {
+  opacity: 0.7;
+  position: relative;
+}
+
+.chat-container:not(:has(.read-only-banner)) {
+  padding-top: 0;
 }

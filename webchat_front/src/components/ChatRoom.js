@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { FiPaperclip, FiImage, FiArrowLeft } from 'react-icons/fi';
 import '../styles/ChatRoom.css';
 
 function useChatRoom(userInfo) {
   const navigate = useNavigate();
   const { roomId } = useParams();
+  const location = useLocation();
+  const isActive = new URLSearchParams(location.search).get('isActive') === 'true';
+  const [readOnlyMode, setReadOnlyMode] = useState(!isActive);
   
   const [messages, setMessages] = useState(() => {
     const cached = localStorage.getItem(`chat-messages-${roomId}`);
@@ -117,6 +120,8 @@ function useChatRoom(userInfo) {
   }, [roomId, userInfo, updateLastReadTime]);
 
   const connectWebSocket = useCallback((user) => {
+    if (!isActive) return;
+    
     const client = new Client({
       brokerURL: 'ws://localhost:8080/ws',
       reconnectDelay: 5000,
@@ -187,7 +192,7 @@ function useChatRoom(userInfo) {
     } catch (error) {
       console.error('Connection error:', error);
     }
-  }, [roomId, userInfo.name, updateLastReadTime]);
+  }, [roomId, userInfo.name, updateLastReadTime, isActive]);
 
   const handleMessageSubmit = useCallback(async (message) => {
     const messageData = {
@@ -286,8 +291,11 @@ function useChatRoom(userInfo) {
 
   useEffect(() => {
     if (isFirstLoad.current) {
-      scrollToBottomInstantly();
-      isFirstLoad.current = false;
+      // 약간의 지연을 주어 DOM이 완전히 렌더링된 후 스크롤
+      setTimeout(() => {
+        scrollToBottomInstantly();
+        isFirstLoad.current = false;
+      }, 100);
     } else {
       const { scrollHeight, scrollTop, clientHeight } = chatMessagesRef.current;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
@@ -299,7 +307,7 @@ function useChatRoom(userInfo) {
         scrollToBottom();
       }
     }
-  }, [messages]);
+  }, [messages, scrollToBottomInstantly, scrollToBottom, userInfo.name]);
 
   // 검색 기능
   const handleSearch = useCallback((query) => {
@@ -471,6 +479,44 @@ function useChatRoom(userInfo) {
     }
   }, [roomId, userInfo.name, updateLastReadTime]);
 
+  const handleQuitRoom = useCallback(async () => {
+    if (!window.confirm('정말로 채팅방을 나가시겠습니까?\n나간 채팅방의 메시지는 복구할 수 없습니다.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/chat-rooms/${roomId}/quit/${userInfo.userIdx}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('채팅방 나가기 실패');
+      }
+
+      // 로컬 스토리지에서 해당 채팅방 메시지 삭제
+      localStorage.removeItem(`chat-messages-${roomId}`);
+
+      // 웹소켓 연결 해제
+      if (clientRef.current) {
+        clientRef.current.deactivate();
+      }
+
+      // 홈으로 이동
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('채팅방 나가기 중 오류:', error);
+      alert('채팅방 나가기에 실패했습니다.');
+    }
+  }, [roomId, userInfo.userIdx, navigate]);
+
+  useEffect(() => {
+    if (!isActive) {
+      if (clientRef.current) {
+        clientRef.current.deactivate();
+      }
+    }
+  }, [isActive]);
+
   return {
     messages,
     participants,
@@ -493,6 +539,9 @@ function useChatRoom(userInfo) {
     scrollToBottom,
     scrollToBottomInstantly,
     handleFileUpload,
+    handleQuitRoom,
+    readOnlyMode,
+    isActive
   };
 }
 
@@ -732,34 +781,53 @@ function ChatRoom({ userInfo }) {
     scrollToBottom,
     scrollToBottomInstantly,
     handleFileUpload,
+    handleQuitRoom,
+    readOnlyMode,
+    isActive
   } = useChatRoom(userInfo);
 
   return (
     <div className="chat-container">
-      <div className="user-list" style={{ width: userListWidth }}>
-        <div className="resize-handle" onMouseDown={handleMouseDown}></div>
-        <h3>
-          채팅방 참여자 ({participants?.length || 0}) 
-        </h3>
-        <ParticipantList 
-          participants={participants}
-          userInfo={userInfo}
-          onlineUsers={onlineUsers}
-        />
-      </div>
-      <div className="chat-room">
+      {readOnlyMode && (
+        <div className="read-only-banner">
+          이 채팅방은 비활성화된 채팅방입니다. 메시지만 확인할 수 있습니다.
+        </div>
+      )}
+      {!readOnlyMode && (
+        <div className="user-list" style={{ width: userListWidth }}>
+          <div className="resize-handle" onMouseDown={handleMouseDown}></div>
+          <h3>
+            채팅방 참여자 ({participants?.length || 0}) 
+          </h3>
+          <ParticipantList 
+            participants={participants}
+            userInfo={userInfo}
+            onlineUsers={onlineUsers}
+          />
+        </div>
+      )}
+      <div className={`chat-room ${readOnlyMode ? 'full-width' : ''}`}>
         <div className="chat-header">
           <button className="back-button" onClick={() => navigate(-1)}>
             <FiArrowLeft /> 뒤로가기
           </button>
           <h2>채팅방</h2>
-          <button 
-            className="search-button" 
-            onClick={() => setIsSearchOpen(true)}
-            title="메시지 검색 (Ctrl+F)"
-          >
-            🔍
-          </button>
+          <div className="header-buttons">
+            <button 
+              className="search-button" 
+              onClick={() => setIsSearchOpen(true)}
+              title="메시지 검색 (Ctrl+F)"
+            >
+              🔍
+            </button>
+            <button 
+              className="quit-button"
+              onClick={() => handleQuitRoom()}
+              title="채팅방 나가기"
+            >
+              나가기
+            </button>
+          </div>
         </div>
         {isSearchOpen && (
           <SearchBar
@@ -797,7 +865,12 @@ function ChatRoom({ userInfo }) {
             </button>
           )}
         </div>
-        <ChatInputForm onSubmit={handleMessageSubmit} onFileUpload={handleFileUpload} />
+        {!readOnlyMode && (
+          <ChatInputForm 
+            onSubmit={handleMessageSubmit} 
+            onFileUpload={handleFileUpload} 
+          />
+        )}
       </div>
     </div>
   );

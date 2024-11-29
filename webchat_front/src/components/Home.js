@@ -50,7 +50,6 @@ const Home = ({ isLoggedIn, userInfo }) => {
                 updates.lastMessageTime = messageDTO.time;
               }
 
-              console.log('Updated room data:', updates);
               return updates;
             }
             return room;
@@ -125,14 +124,17 @@ const Home = ({ isLoggedIn, userInfo }) => {
               key={room.roomId}
               room={{
                 id: room.roomId,
-                name: room.roomName,
+                name: room.participantNames,
                 lastMessage: room.latestMessage,
                 lastMessageTime: room.lastMessageTime,
                 unreadCount: room.unreadCount,
                 participantCount: room.currentParticipants,
-                maxParticipants: room.maxParticipants
-              }} 
+                maxParticipants: room.maxParticipants,
+                isActive: room.isActive,
+                tags: room.tags
+              }}
               type="direct"
+              showInactiveOverlay={true}
             />
           ))}
           {subTab === 'group' && joinedChatRooms.group.map(room => (
@@ -140,14 +142,17 @@ const Home = ({ isLoggedIn, userInfo }) => {
               key={room.roomId}
               room={{
                 id: room.roomId,
-                name: room.roomName,
+                name: room.roomName !== null ? room.roomName : room.participantNames,
                 lastMessage: room.latestMessage,
                 lastMessageTime: room.lastMessageTime,
                 unreadCount: room.unreadCount,
                 participantCount: room.currentParticipants,
-                maxParticipants: room.maxParticipants
-              }} 
+                maxParticipants: room.maxParticipants,
+                isActive: room.isActive,
+                tags: room.tags
+              }}
               type="group"
+              showInactiveOverlay={true}
             />
           ))}
           {subTab === 'open' && joinedChatRooms.open.map(room => (
@@ -160,12 +165,30 @@ const Home = ({ isLoggedIn, userInfo }) => {
                 lastMessageTime: room.lastMessageTime,
                 unreadCount: room.unreadCount,
                 participantCount: room.currentParticipants,
-                maxParticipants: room.maxParticipants
-              }} 
+                maxParticipants: room.maxParticipants,
+                isActive: room.isActive,
+                tags: room.tags
+              }}
               type="open"
+              showInactiveOverlay={true}
             />
           ))}
         </div>
+      </div>
+    );
+  };
+
+  const renderOpenRooms = () => {
+    return (
+      <div className="chat-rooms-grid">
+        {openChatRooms.map(room => (
+          <ChatRoomCard 
+            key={room.id}
+            room={room}
+            type="open"
+            showInactiveOverlay={false}
+          />
+        ))}
       </div>
     );
   };
@@ -182,24 +205,7 @@ const Home = ({ isLoggedIn, userInfo }) => {
           </div>
         );
       case 'open':
-        return (
-          <div className="chat-rooms-grid">
-            {openChatRooms.map(room => (
-              <ChatRoomCard 
-                key={room.id}
-                room={{
-                  id: room.id,
-                  name: room.name,
-                  lastMessageTime: room.lastMessageTime,
-                  participantCount: room.currentParticipants,
-                  maxParticipants: room.maxParticipants,
-                  hasPassword: room.hasPassword
-                }} 
-                type="open"
-              />
-            ))}
-          </div>
-        );
+        return renderOpenRooms();
       default:
         return null;
     }
@@ -266,29 +272,32 @@ const formatMessageTime = (timestamp) => {
 };
 
 // ChatRoomCard 컴포넌트 수정
-const ChatRoomCard = ({ room, type }) => {
+const ChatRoomCard = ({ room, type, showInactiveOverlay }) => {
   const navigate = useNavigate();
 
   const handleClick = (e) => {
-    e.preventDefault(); // 기본 Link 동작 방지
+    e.preventDefault();
     
-    // 먼저 WebSocket 연결 해제 (필요한 경우)
     if (window.chatWebSocket) {
       window.chatWebSocket.deactivate();
     }
 
-    // 약간의 지연 후 페이지 이동
     setTimeout(() => {
-      window.location.href = `/chat/${room.id}`;
+      window.location.href = `/chat/${room.id}?isActive=${room.isActive}`;
     }, 100);
   };
 
   return (
     <div 
       onClick={handleClick} 
-      className="chat-room-card-link"
+      className={`chat-room-card-link ${!room.isActive && showInactiveOverlay ? 'inactive' : ''}`}
     >
       <div className="chat-room-card">
+        {!room.isActive && showInactiveOverlay && (
+          <div className="inactive-overlay">
+            비활성화된 채팅방입니다
+          </div>
+        )}
         <div className="room-header">
           <div className="room-title">
             <div className="room-icon">

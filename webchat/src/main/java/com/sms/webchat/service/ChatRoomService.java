@@ -90,4 +90,23 @@ public class ChatRoomService {
             ));
     }
 
+    @Transactional
+    public void quitChatRoom(Long roomId, Long userIdx) {
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+            .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다."));
+        
+        // 참여자 삭제
+        RoomParticipant participant = roomParticipantRepository.findByRoomIdAndUserIdx(roomId, userIdx)
+            .orElseThrow(() -> new RuntimeException("참여자를 찾을 수 없습니다."));
+        
+        roomParticipantRepository.delete(participant);
+        
+        // 남은 참여자 수 확인
+        int remainingParticipants = roomParticipantRepository.countByRoomId(roomId);
+        if (remainingParticipants <= 1) {
+            chatRoom.deactivate();  // ChatRoom 엔티티의 메서드 사용
+            chatRoomRepository.save(chatRoom);
+        }
+    }
+
 } 

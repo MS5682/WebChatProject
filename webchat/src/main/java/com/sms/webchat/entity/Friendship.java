@@ -37,4 +37,5 @@ public class Friendship {
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
+    
 } 

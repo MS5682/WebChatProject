@@ -20,8 +20,10 @@ public class ChatRoomListDTO {
     private String roomName;
     private RoomType roomType;
     private int maxParticipants;
+    private Boolean isActive;
     private long currentParticipants;
     private String latestMessage;
     private LocalDateTime lastMessageTime;
     private long unreadCount;
+    private String participantNames;
 } 

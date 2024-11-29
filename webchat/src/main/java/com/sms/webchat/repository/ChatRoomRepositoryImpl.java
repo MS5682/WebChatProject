@@ -27,6 +27,7 @@ public class ChatRoomRepositoryImpl implements ChatRoomRepositoryCustom {
         QRoomParticipant roomParticipant = QRoomParticipant.roomParticipant;
         QMessage message = QMessage.message;
         QRoomParticipant lastRead = new QRoomParticipant("lastRead");
+        QUser user = QUser.user;
         
         return queryFactory
             .select(Projections.constructor(ChatRoomListDTO.class,
@@ -34,6 +35,7 @@ public class ChatRoomRepositoryImpl implements ChatRoomRepositoryCustom {
                 chatRoom.name,
                 chatRoom.roomType,
                 chatRoom.maxParticipants,
+                chatRoom.isActive,
                 JPAExpressions
                     .select(roomParticipant.count())
                     .from(roomParticipant)
@@ -69,13 +71,23 @@ public class ChatRoomRepositoryImpl implements ChatRoomRepositoryCustom {
                                 .from(lastRead)
                                 .where(lastRead.room.eq(chatRoom)
                                     .and(lastRead.user.idx.eq(userIdx)))
-                        )))
+                        ))),
+                ExpressionUtils.as(  // 추가: 참여자 이름들을 가져오는 서브쿼리
+                JPAExpressions
+                    .select(Expressions.stringTemplate(
+                        "GROUP_CONCAT({0})", 
+                        user.name))
+                    .from(roomParticipant)
+                    .join(roomParticipant.user, user)
+                    .where(roomParticipant.room.eq(chatRoom)
+                        .and(roomParticipant.user.idx.ne(userIdx)))
+                    .groupBy(roomParticipant.room),
+                "participantNames")
             ))
             .from(chatRoom)
             .join(roomParticipant).on(roomParticipant.room.eq(chatRoom))
             .where(
                 roomParticipant.user.idx.eq(userIdx)
-                    .and(chatRoom.isActive.eq(true))
             )
             .orderBy(Expressions.stringPath("lastMessageTime").desc())
             .fetch();
