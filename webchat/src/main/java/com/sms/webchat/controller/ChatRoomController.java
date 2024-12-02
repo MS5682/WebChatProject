@@ -13,6 +13,7 @@ import com.sms.webchat.dto.response.ChatRoomListDTO;
 import com.sms.webchat.dto.response.PublicGroupChatRoomDTO;
 import com.sms.webchat.dto.response.ChatRoomParticipantDTO;
 import com.sms.webchat.service.ChatRoomService;
+import com.sms.webchat.dto.request.ChatRoomCreateRequestDTO;
 import com.sms.webchat.dto.request.ReadTimeRequestDTO;
 import com.sms.webchat.dto.response.ApiResponseDto;
 import com.sms.webchat.dto.MessageDTO;
@@ -87,6 +88,32 @@ public class ChatRoomController {
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponseDto(false, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/private")
+    public ResponseEntity<?> getOrCreatePrivateRoom(
+            @RequestParam Long userIdx,
+            @RequestParam Long friendIdx) {
+        try {
+            Long roomId = chatRoomService.getOrCreatePrivateRoom(userIdx, friendIdx);
+            return ResponseEntity.ok()
+                .body(new ApiResponseDto(true, "채팅방으로 이동합니다.", roomId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body(new ApiResponseDto(false, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/create")
+    public ResponseEntity<?> createChatRoom(@RequestBody ChatRoomCreateRequestDTO requestDTO) {
+        try {
+            Long roomId = chatRoomService.createChatRoom(requestDTO);
+            return ResponseEntity.ok()
+                .body(new ApiResponseDto(true, "채팅방이 생성되었습니다.", roomId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body(new ApiResponseDto(false, e.getMessage()));
         }
     }
 }

@@ -8,7 +8,6 @@ import Login from './Login';
 import Register from './Register';
 import FindId from './FindId';
 import ChangePassword from './ChangePassword';
-import FriendsList from './FriendsList';
 import FriendRequests from './FriendRequests';
 import '../styles/App.css';
 import { Client } from '@stomp/stompjs';
@@ -24,6 +23,7 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isFriendsListOpen, setIsFriendsListOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
   const clientRef = useRef(null);
 
   useEffect(() => {
@@ -113,11 +113,9 @@ function App() {
         client.subscribe('/topic/status', (message) => {
           try {
             const statusUpdate = JSON.parse(message.body);
-            // FriendsList 컴포넌트에 상태 업데이트를 전달하기 위한 이벤트 발생
-            const event = new CustomEvent('userStatusUpdate', {
-              detail: statusUpdate
-            });
-            window.dispatchEvent(event);
+            if (Array.isArray(statusUpdate.onlineUsers)) {
+              setOnlineUsers(new Set(statusUpdate.onlineUsers.map(String)));
+            }
           } catch (error) {
             console.error('상태 업데이트 처리 중 오류:', error);
           }
@@ -238,7 +236,10 @@ function App() {
               />
             } />
             <Route path="/chat/:roomId" element={
-              <ChatRoom userInfo={userInfo} />
+              <ChatRoom 
+                userInfo={userInfo} 
+                onlineUsers={onlineUsers}
+              />
             } />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -246,26 +247,15 @@ function App() {
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/friend-requests" element={
               <FriendRequests 
-              isLoggedIn={isLoggedIn} 
-              userInfo={userInfo}
-              />} />
+                isLoggedIn={isLoggedIn} 
+                userInfo={userInfo}
+                onlineUsers={onlineUsers}
+              />
+            } />
           </Routes>
         </div>
-        {isLoggedIn && (
-          <>
-            <button 
-              className={`friends-toggle-btn ${isFriendsListOpen ? 'open' : ''}`}
-              onClick={toggleFriendsList}
-            >
-              {isFriendsListOpen ? '✕' : '👥 친구 목록'}
-            </button>
-            <div className={`friends-sidebar ${isFriendsListOpen ? 'open' : ''}`}>
-              <FriendsList />
-            </div>
-          </>
-        )}
       </div>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import '../styles/FriendRequests.css';
+import { Client } from '@stomp/stompjs';
 
-function FriendRequests({ userInfo, isLoggedIn }) {
+function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
   const [activeTab, setActiveTab] = useState('friends');
   const [receivedRequests, setReceivedRequests] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
   const [friends, setFriends] = useState([]);
+  const [blockedUsers, setBlockedUsers] = useState([]);
   const [searchUserId, setSearchUserId] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [searchError, setSearchError] = useState('');
+  const clientRef = useRef(null);
 
   useEffect(() => {
     if (isLoggedIn && userInfo) {
       fetchFriendships();
+      
     }
   }, [isLoggedIn, userInfo]);
 
@@ -24,11 +28,15 @@ function FriendRequests({ userInfo, isLoggedIn }) {
       const newFriends = [];
       const newReceivedRequests = [];
       const newSentRequests = [];
+      const newBlockedUsers = [];
 
       friendships.forEach(friendship => {
         if (friendship.status === 'ACCEPTED') {
           const friend = {
             id: friendship.id,
+            friendIdx: friendship.fromUserIdx === userInfo.userIdx 
+              ? friendship.toUserIdx 
+              : friendship.fromUserIdx,
             username: friendship.fromUserIdx === userInfo.userIdx 
               ? friendship.toUserName 
               : friendship.fromUserName,
@@ -55,12 +63,21 @@ function FriendRequests({ userInfo, isLoggedIn }) {
           } else {
             newSentRequests.push(request);
           }
+        } else if (friendship.status === 'BLOCKED' && friendship.fromUserIdx === userInfo.userIdx) {
+          const blockedUser = {
+            id: friendship.id,
+            username: friendship.toUserName,
+            userId: friendship.toUserId,
+            timestamp: new Date(friendship.createdAt)
+          };
+          newBlockedUsers.push(blockedUser);
         }
       });
 
       setFriends(newFriends);
       setReceivedRequests(newReceivedRequests);
       setSentRequests(newSentRequests);
+      setBlockedUsers(newBlockedUsers);
     } catch (error) {
       console.error('친구 목록을 가져오는데 실패했습니다:', error);
     }
@@ -128,7 +145,7 @@ function FriendRequests({ userInfo, isLoggedIn }) {
 
   const handleBlock = async (requestId) => {
     try {
-      const response = await fetch(`/friendship/response?friendshipId=${requestId}&status=BLOCKED`, {
+      const response = await fetch(`/friendship/response?friendshipId=${requestId}&status=BLOCKED&userIdx=${userInfo.userIdx}`, {
         method: 'POST'
       });
 
@@ -247,7 +264,8 @@ function FriendRequests({ userInfo, isLoggedIn }) {
       if (result.success) {
         // 검색 결과를 sent requests에 추가
         const newRequest = {
-          id: result.friendshipId,
+          id: result.data,
+          friendIdx: searchResult.idx,
           username: searchResult.name,
           userId: searchResult.userId,
           timestamp: new Date()
@@ -268,6 +286,50 @@ function FriendRequests({ userInfo, isLoggedIn }) {
     }
   };
 
+  const handleChatStart = async (friendIdx) => {
+    try {
+      const response = await fetch(`/chat-rooms/private?userIdx=${userInfo.userIdx}&friendIdx=${friendIdx}`, {
+        method: 'POST'
+      });
+
+      const result = await response.json();
+      console.log(result);
+      if (!response.ok) {
+        throw new Error(result.message || '채팅방 생성 실패');
+      }
+
+      if (result.success && result.data) {
+        // 채팅방으로 이동
+        window.location.href = `/chat/${result.data}?isActive=true`;
+      }
+    } catch (error) {
+      console.error('채팅방 생성/이동 실패:', error);
+      alert('채팅방으로 이동하는데 실패했습니다.');
+    }
+  };
+
+  const handleUnblock = async (friendshipId) => {
+    try {
+      const response = await fetch(`/friendship/response?friendshipId=${friendshipId}&status=REJECTED`, {
+        method: 'POST'
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || '차단 해제 실패');
+      }
+
+      if (result.success) {
+        setBlockedUsers(prev => prev.filter(user => user.id !== friendshipId));
+        alert('차단이 해제되었습니다.');
+      }
+    } catch (error) {
+      console.error('차단 해제 실패:', error);
+      alert('차단 해제에 실패했습니다.');
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'friends':
@@ -283,13 +345,18 @@ function FriendRequests({ userInfo, isLoggedIn }) {
                       <div className="friend-avatar"></div>
                       <div className="friend-details">
                         <span className="username">{friend.username}</span>
-                        <span className={`status ${friend.status}`}>
-                          {friend.status === 'online' ? '온라인' : '오프라인'}
+                        <span className={`status ${onlineUsers.has(String(friend.friendIdx)) ? 'online' : 'offline'}`}>
+                          {onlineUsers.has(String(friend.friendIdx)) ? '온라인' : '오프라인'}
                         </span>
                       </div>
                     </div>
                     <div className="friend-actions">
-                      <button className="chat-btn">채팅</button>
+                      <button 
+                        className="chat-btn"
+                        onClick={() => handleChatStart(friend.friendIdx)}
+                      >
+                        채팅
+                      </button>
                       <button 
                         className="delete-btn"
                         onClick={() => handleDeleteFriend(friend.id)}
@@ -411,6 +478,35 @@ function FriendRequests({ userInfo, isLoggedIn }) {
             )}
           </div>
         );
+      case 'blocked':
+        return (
+          <div className="requests-list">
+            {blockedUsers.length === 0 ? (
+              <p className="no-requests">차단된 사용자가 없습니다.</p>
+            ) : (
+              <ul>
+                {blockedUsers.map(user => (
+                  <li key={user.id} className="request-item">
+                    <div className="request-info">
+                      <span className="username">{user.username}</span>
+                      <span className="timestamp">
+                        {user.timestamp.toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="request-actions">
+                      <button 
+                        className="unblock-btn"
+                        onClick={() => handleUnblock(user.id)}
+                      >
+                        차단 해제
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
       default:
         return null;
     }
@@ -436,6 +532,12 @@ function FriendRequests({ userInfo, isLoggedIn }) {
           onClick={() => setActiveTab('sent')}
         >
           보낸 요청
+        </button>
+        <button
+          className={`tab ${activeTab === 'blocked' ? 'active' : ''}`}
+          onClick={() => setActiveTab('blocked')}
+        >
+          차단 목록
         </button>
       </div>
       {renderContent()}

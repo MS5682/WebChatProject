@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Home.css';
+import CreateChatRoomModal from './CreateChatRoomModal';
 
 const Home = ({ isLoggedIn, userInfo }) => {
   const [activeTab, setActiveTab] = useState('joined');
@@ -11,6 +12,8 @@ const Home = ({ isLoggedIn, userInfo }) => {
     open: []   // PUBLIC_GROUP
   });
   const [openChatRooms, setOpenChatRooms] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createRoomType, setCreateRoomType] = useState(null); // 'group' 또는 'open'
 
   useEffect(() => {
     if (isLoggedIn && userInfo.userIdx) {
@@ -116,6 +119,18 @@ const Home = ({ isLoggedIn, userInfo }) => {
           >
             참여중인 오픈채팅
           </button>
+
+          {subTab !== 'direct' && (
+            <button 
+              className="create-chat-create-room-button"
+              onClick={() => {
+                setCreateRoomType(subTab);
+                setShowCreateModal(true);
+              }}
+            >
+              +
+            </button>
+          )}
         </div>
 
         <div className="chat-rooms-grid">
@@ -173,7 +188,17 @@ const Home = ({ isLoggedIn, userInfo }) => {
               showInactiveOverlay={true}
             />
           ))}
+          
+         
         </div>
+
+        {showCreateModal && (
+          <CreateChatRoomModal
+            type={createRoomType}
+            onClose={() => setShowCreateModal(false)}
+            userInfo={userInfo}
+          />
+        )}
       </div>
     );
   };

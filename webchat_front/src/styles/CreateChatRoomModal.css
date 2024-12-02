@@ -1,0 +1,186 @@
+.create-chat-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+
+
+.create-chat-modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.create-chat-form-group {
+  margin-bottom: 15px;
+}
+
+.create-chat-form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.create-chat-friends-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.create-chat-friend-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  margin: 4px 0;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  height: 36px;
+}
+
+.create-chat-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.create-chat-friend-item:hover, .create-chat-checkbox-label:hover {
+  background-color: #f8f9fa;
+}
+
+.create-chat-friend-item input[type="checkbox"], .create-chat-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  margin-right: 10px;
+  cursor: pointer;
+  position: relative;
+  background-color: white;
+  transition: background-color 0.2s;
+}
+
+.create-chat-friend-item input[type="checkbox"]:active, .create-chat-checkbox-label input[type="checkbox"]:active {
+  background-color: rgba(0, 123, 255, 0.2);
+}
+
+.create-chat-friend-item input[type="checkbox"]:checked, .create-chat-checkbox-label input[type="checkbox"]:checked {
+  background-color: #007bff;
+}
+
+.create-chat-friend-item input[type="checkbox"]:checked::after, .create-chat-checkbox-label input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.create-chat-friend-item input[type="checkbox"]:hover, .create-chat-checkbox-label input[type="checkbox"]:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.create-chat-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.create-chat-modal-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.create-chat-modal-buttons button[type="submit"] {
+  background-color: #007bff;
+  color: white;
+}
+
+.create-chat-modal-buttons button[type="button"] {
+  background-color: #6c757d;
+  color: white;
+}
+
+.create-chat-create-room-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #007bff;
+  color: white;
+  font-size: 24px;
+  border: none;
+  cursor: pointer;
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.cancel-button, .prev-button {
+  min-width: 60px;
+}
+
+.skip-button{
+  min-width: 100px;
+}
+
+.create-chat-form-group input[type="text"],
+.create-chat-form-group input[type="password"],
+.create-chat-form-group input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.create-chat-form-group input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.create-chat-modal-buttons button.create-button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+/* 호버 효과도 추가 */
+.create-chat-modal-buttons button.create-button:hover {
+  background-color: #0056b3;
+}
+

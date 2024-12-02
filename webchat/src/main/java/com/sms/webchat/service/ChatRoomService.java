@@ -3,6 +3,7 @@ package com.sms.webchat.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.sms.webchat.dto.response.ChatRoomListDTO;
 import com.sms.webchat.dto.response.PublicGroupChatRoomDTO;
@@ -14,6 +15,10 @@ import com.sms.webchat.entity.RoomParticipant;
 import com.sms.webchat.dto.MessageDTO;
 import com.sms.webchat.repository.MessageRepository;
 import com.sms.webchat.dto.ReadStatusMessage;
+import com.sms.webchat.entity.User;
+import com.sms.webchat.repository.UserRepository;
+import com.sms.webchat.enums.RoomType;
+import com.sms.webchat.dto.request.ChatRoomCreateRequestDTO;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,6 +36,8 @@ public class ChatRoomService {
     private final RoomParticipantRepository roomParticipantRepository;
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public List<ChatRoomListDTO> getChatRoomsByUserIdx(Long userIdx) {
         return chatRoomRepository.findChatRoomsByUserIdx(userIdx);
@@ -107,6 +114,90 @@ public class ChatRoomService {
             chatRoom.deactivate();  // ChatRoom 엔티티의 메서드 사용
             chatRoomRepository.save(chatRoom);
         }
+    }
+
+    @Transactional
+    public Long getOrCreatePrivateRoom(Long userIdx, Long friendIdx) {
+        // 두 사용자가 참여한 PRIVATE_CHAT 찾기
+        User user = userRepository.findByIdx(userIdx)
+            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        User friend = userRepository.findByIdx(friendIdx)
+            .orElseThrow(() -> new RuntimeException("상대방을 찾을 수 없습니다."));
+            
+        // 기존 1:1 채팅방 찾기
+        List<ChatRoom> userRooms = roomParticipantRepository.findByUser(user)
+            .stream()
+            .map(RoomParticipant::getRoom)
+            .filter(room -> room.getRoomType() == RoomType.PRIVATE_CHAT && room.isActive())
+            .toList();
+            
+        for (ChatRoom room : userRooms) {
+            boolean isFriendInRoom = roomParticipantRepository.findByRoom(room)
+                .stream()
+                .anyMatch(participant -> participant.getUser().getIdx().equals(friendIdx));
+                
+            if (isFriendInRoom) {
+                return room.getId();
+            }
+        }
+        
+        // 없으면 새로운 채팅방 생성
+        ChatRoom newRoom = ChatRoom.builder()
+            .roomType(RoomType.PRIVATE_CHAT)
+            .maxParticipants(2)
+            .isActive(true)
+            .build();
+        newRoom = chatRoomRepository.save(newRoom);
+        
+        // 참여자 추가
+        RoomParticipant userParticipant = RoomParticipant.builder()
+            .room(newRoom)
+            .user(user)
+            .lastReadTime(LocalDateTime.now())
+            .build();
+        RoomParticipant friendParticipant = RoomParticipant.builder()
+            .room(newRoom)
+            .user(friend)
+            .lastReadTime(LocalDateTime.now())
+            .build();
+            
+        roomParticipantRepository.save(userParticipant);
+        roomParticipantRepository.save(friendParticipant);
+        
+        return newRoom.getId();
+    }
+
+    @Transactional
+    public Long createChatRoom(ChatRoomCreateRequestDTO requestDTO) {
+        // 1. ChatRoom 생성
+        ChatRoom chatRoom = ChatRoom.builder()
+            .name(requestDTO.getRoomName())
+            .roomType(RoomType.valueOf(requestDTO.getRoomType()))
+            .maxParticipants(requestDTO.getMaxParticipants())
+            .password(requestDTO.getPassword() != null ? 
+                     passwordEncoder.encode(requestDTO.getPassword()) : null)
+            .isActive(true)
+            .build();
+        
+        chatRoom = chatRoomRepository.save(chatRoom);
+        
+        // 2. RoomParticipants 생성
+        ChatRoom finalChatRoom = chatRoom;  
+        List<RoomParticipant> participants = requestDTO.getParticipants().stream()
+            .map(userIdx -> {
+                User user = userRepository.findById(userIdx)
+                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+                
+                return RoomParticipant.builder()
+                    .room(finalChatRoom) 
+                    .user(user)
+                    .build();
+            })
+            .collect(Collectors.toList());
+        
+        roomParticipantRepository.saveAll(participants);
+        
+        return chatRoom.getId();
     }
 
 } 

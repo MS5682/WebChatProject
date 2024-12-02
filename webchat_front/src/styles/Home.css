@@ -248,4 +248,9 @@
 .chat-room-card:hover .unread-count {
   background-color: #ffeeba;
 }
+
+.joined-rooms {
+  position: relative;
+  min-height: 200px;
+}
  

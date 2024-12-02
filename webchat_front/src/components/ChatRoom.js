@@ -411,27 +411,13 @@ function useChatRoom(userInfo) {
 
   // 파일 전송 함수 추가
   const handleFileUpload = useCallback(async (file) => {
-    // FormData 생성 및 데이터 추가 전에 콘솔 로그
-    console.log('업로드할 파일:', file);
-    console.log('roomId:', roomId);
-    console.log('sender:', userInfo.name);
 
     const formData = new FormData();
     
-    // 각 append 후에 확인을 위한 콘솔 로그 추가
     formData.append('file', file);
-    console.log('file append 후:', formData.get('file'));
-    
     formData.append('roomId', roomId);
-    console.log('roomId append 후:', formData.get('roomId'));
-    
     formData.append('sender', userInfo.name);
-    console.log('sender append 후:', formData.get('sender'));
 
-    // FormData 전체 내용 확인
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`);
-    }
 
     try {
       const response = await fetch('/chat/upload', {
@@ -447,7 +433,6 @@ function useChatRoom(userInfo) {
       }
       
       const fileData = await response.json();
-      console.log('업로드 성공:', fileData);
       
       // 웹소켓으로 메시지 전송
       if (clientRef.current) {

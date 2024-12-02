@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -50,23 +49,28 @@ public class FriendshipService {
         friendshipRepository.save(friendship);
     }
 
-    public List<FriendshipDTO> getFriendshipsByUserIdx(Long userIdx) {
-        User user = userRepository.findById(userIdx)
-            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
-            
-        List<Friendship> sentRequests = friendshipRepository.findByFromUser(user);
-        List<Friendship> receivedRequests = friendshipRepository.findByToUser(user);
-        
-        List<Friendship> allFriendships = new ArrayList<>();
-        allFriendships.addAll(sentRequests);
-        allFriendships.addAll(receivedRequests);
-        
-        return friendshipMapper.toDtoList(allFriendships);
+    public List<FriendshipDTO> getFriendshipsByUserIdx(Long userIdx, FriendshipStatus status) {
+        List<Friendship> friendships = friendshipRepository.findFriendships(userIdx, status);
+        return friendshipMapper.toDtoList(friendships);
     }
 
     public void deleteFriendship(Long friendshipId) {
         Friendship friendship = friendshipRepository.findById(friendshipId)
             .orElseThrow(() -> new RuntimeException("친구 요청을 찾을 수 없습니다."));
         friendshipRepository.delete(friendship);
+    }
+
+    public void blockFriendship(Long friendshipId, FriendshipStatus status, Long userIdx) {
+        Friendship friendship = friendshipRepository.findById(friendshipId)
+            .orElseThrow(() -> new RuntimeException("친구 요청을 찾을 수 없습니다."));
+        
+        if (friendship.getToUser().getIdx().equals(userIdx)) {
+            User tempUser = friendship.getFromUser();
+            friendship.setFromUser(friendship.getToUser());
+            friendship.setToUser(tempUser);
+        }
+        
+        friendship.setStatus(status);
+        friendshipRepository.save(friendship);
     }
 } 

@@ -48,12 +48,17 @@ public class FriendshipController {
     @PostMapping("/response")
     public ResponseEntity<?> respondToFriendship(
             @RequestParam Long friendshipId,
-            @RequestParam FriendshipStatus status) {
+            @RequestParam FriendshipStatus status,
+            @RequestParam Long userIdx) {
         try {
             if (status == FriendshipStatus.REJECTED) {
                 friendshipService.deleteFriendship(friendshipId);
                 return ResponseEntity.ok()
                     .body(new ApiResponseDto(true, "친구 요청을 거절했습니다."));
+            } else if (status == FriendshipStatus.BLOCKED) {
+                friendshipService.blockFriendship(friendshipId, status, userIdx);
+                return ResponseEntity.ok()
+                    .body(new ApiResponseDto(true, "해당 유저를 차단했습니다."));
             } else {
                 friendshipService.updateFriendshipStatus(friendshipId, status);
                 return ResponseEntity.ok()
@@ -66,9 +71,11 @@ public class FriendshipController {
     }
 
     @GetMapping("/list/{userIdx}")
-    public ResponseEntity<?> getFriendshipList(@PathVariable Long userIdx) {
+    public ResponseEntity<?> getFriendshipList(
+            @PathVariable Long userIdx,
+            @RequestParam(required = false) FriendshipStatus status) {
         try {
-            List<FriendshipDTO> friendships = friendshipService.getFriendshipsByUserIdx(userIdx);
+            List<FriendshipDTO> friendships = friendshipService.getFriendshipsByUserIdx(userIdx, status);
             return ResponseEntity.ok(friendships);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
