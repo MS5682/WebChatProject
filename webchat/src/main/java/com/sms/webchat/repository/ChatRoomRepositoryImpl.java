@@ -94,7 +94,7 @@ public class ChatRoomRepositoryImpl implements ChatRoomRepositoryCustom {
     }
 
     @Override
-    public List<PublicGroupChatRoomDTO> findPublicGroupChatRooms() {
+    public List<PublicGroupChatRoomDTO> findPublicGroupChatRooms(Long userIdx) {
         QChatRoom chatRoom = QChatRoom.chatRoom;
         QRoomParticipant roomParticipant = QRoomParticipant.roomParticipant;
         QMessage message = QMessage.message;
@@ -109,22 +109,29 @@ public class ChatRoomRepositoryImpl implements ChatRoomRepositoryCustom {
                     .from(roomParticipant)
                     .where(roomParticipant.room.eq(chatRoom)),
                 ExpressionUtils.as(
-                JPAExpressions
-                    .select(message.createdAt)
-                    .from(message)
-                    .where(message.room.eq(chatRoom)
-                        .and(message.createdAt.eq(
-                            JPAExpressions
-                                .select(message.createdAt.max())
-                                .from(message)
-                                .where(message.room.eq(chatRoom))
-                        ))),"lastMessageTime"),
-                chatRoom.password.isNotNull()
+                    JPAExpressions
+                        .select(message.createdAt)
+                        .from(message)
+                        .where(message.room.eq(chatRoom)
+                            .and(message.createdAt.eq(
+                                JPAExpressions
+                                    .select(message.createdAt.max())
+                                    .from(message)
+                                    .where(message.room.eq(chatRoom))
+                            ))), "lastMessageTime"),
+                chatRoom.password.isNotNull(),
+                chatRoom.isActive
             ))
             .from(chatRoom)
             .where(
                 chatRoom.roomType.eq(RoomType.PUBLIC_GROUP)
                     .and(chatRoom.isActive.eq(true))
+                    .and(chatRoom.id.notIn(
+                        JPAExpressions
+                            .select(roomParticipant.room.id)
+                            .from(roomParticipant)
+                            .where(roomParticipant.user.idx.eq(userIdx))
+                    ))
             )
             .orderBy(Expressions.stringPath("lastMessageTime").desc())
             .fetch();

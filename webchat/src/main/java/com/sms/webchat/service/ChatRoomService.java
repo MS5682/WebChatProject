@@ -19,6 +19,7 @@ import com.sms.webchat.entity.User;
 import com.sms.webchat.repository.UserRepository;
 import com.sms.webchat.enums.RoomType;
 import com.sms.webchat.dto.request.ChatRoomCreateRequestDTO;
+import com.sms.webchat.dto.request.ChatRoomJoinRequestDTO;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,8 +44,8 @@ public class ChatRoomService {
         return chatRoomRepository.findChatRoomsByUserIdx(userIdx);
     }
 
-    public List<PublicGroupChatRoomDTO> getPublicGroupChatRooms() {
-        return chatRoomRepository.findPublicGroupChatRooms();
+    public List<PublicGroupChatRoomDTO> getPublicGroupChatRooms(Long userIdx) {
+        return chatRoomRepository.findPublicGroupChatRooms(userIdx);
     }
 
     public List<ChatRoomParticipantDTO> getChatRoomParticipants(Long roomId) {
@@ -191,6 +192,7 @@ public class ChatRoomService {
                 return RoomParticipant.builder()
                     .room(finalChatRoom) 
                     .user(user)
+                    .lastReadTime(LocalDateTime.now())
                     .build();
             })
             .collect(Collectors.toList());
@@ -198,6 +200,38 @@ public class ChatRoomService {
         roomParticipantRepository.saveAll(participants);
         
         return chatRoom.getId();
+    }
+
+    @Transactional
+    public void joinChatRoom(ChatRoomJoinRequestDTO requestDTO) {
+        ChatRoom chatRoom = chatRoomRepository.findById(requestDTO.getRoomId())
+            .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다."));
+        
+        // 비밀번호 확인
+        if (chatRoom.getPassword() != null) {
+            if (requestDTO.getPassword() == null) {
+                throw new RuntimeException("비밀번호가 필요합니다.");
+            }
+            if (!passwordEncoder.matches(requestDTO.getPassword(), chatRoom.getPassword())) {
+                throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+            }
+        }
+        
+        User user = userRepository.findById(requestDTO.getUserIdx())
+            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        // 이미 참여중인지 확인
+        if (roomParticipantRepository.existsByRoomAndUser(chatRoom, user)) {
+            throw new RuntimeException("이미 참여중인 채팅방입니다.");
+        }
+        
+        RoomParticipant participant = RoomParticipant.builder()
+            .room(chatRoom)
+            .user(user)
+            .lastReadTime(LocalDateTime.now())
+            .build();
+        
+        roomParticipantRepository.save(participant);
     }
 
 } 

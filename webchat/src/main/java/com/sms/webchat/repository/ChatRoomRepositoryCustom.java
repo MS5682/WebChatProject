@@ -8,6 +8,6 @@ import com.sms.webchat.dto.response.ChatRoomParticipantDTO;
 
 public interface ChatRoomRepositoryCustom {
     List<ChatRoomListDTO> findChatRoomsByUserIdx(Long userIdx);
-    List<PublicGroupChatRoomDTO> findPublicGroupChatRooms();
+    List<PublicGroupChatRoomDTO> findPublicGroupChatRooms(Long userIdx);
     List<ChatRoomParticipantDTO> findParticipantsByRoomId(Long roomId);
 }

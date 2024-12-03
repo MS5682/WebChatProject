@@ -18,9 +18,9 @@ const Home = ({ isLoggedIn, userInfo }) => {
   useEffect(() => {
     if (isLoggedIn && userInfo.userIdx) {
       fetchChatRooms();
+      fetchPublicChatRooms();
     }
-    fetchPublicChatRooms();
-  }, [isLoggedIn, userInfo]);
+  }, [isLoggedIn, userInfo.userIdx]);
 
   useEffect(() => {
     const handleUnreadCountUpdate = (event) => {
@@ -72,9 +72,7 @@ const Home = ({ isLoggedIn, userInfo }) => {
     try {
       const response = await fetch('/chat-rooms/user/'+userInfo.userIdx);
       const chatRooms = await response.json();
-      console.log(chatRooms);
 
-      // 채팅방 타입별로 분류
       const sortedRooms = {
         direct: chatRooms.filter(room => room.roomType === 'PRIVATE_CHAT'),
         group: chatRooms.filter(room => room.roomType === 'PROTECTED_GROUP'),
@@ -89,8 +87,9 @@ const Home = ({ isLoggedIn, userInfo }) => {
 
   const fetchPublicChatRooms = async () => {
     try {
-      const response = await fetch('/chat-rooms/public');
+      const response = await fetch(`/chat-rooms/public?userIdx=${userInfo.userIdx}`);
       const publicRooms = await response.json();
+      console.log('publicRooms', publicRooms);
       setOpenChatRooms(publicRooms);
     } catch (error) {
       console.error('오픈채팅방 목록을 가져오는데 실패했습니다:', error);
@@ -143,33 +142,42 @@ const Home = ({ isLoggedIn, userInfo }) => {
                 lastMessage: room.latestMessage,
                 lastMessageTime: room.lastMessageTime,
                 unreadCount: room.unreadCount,
-                participantCount: room.currentParticipants,
+                participantCount: room.participantCount,
                 maxParticipants: room.maxParticipants,
-                isActive: room.isActive,
-                tags: room.tags
+                isActive: room.isActive
               }}
               type="direct"
               showInactiveOverlay={true}
             />
           ))}
-          {subTab === 'group' && joinedChatRooms.group.map(room => (
-            <ChatRoomCard 
-              key={room.roomId}
-              room={{
-                id: room.roomId,
-                name: room.roomName !== null ? room.roomName : room.participantNames,
-                lastMessage: room.latestMessage,
-                lastMessageTime: room.lastMessageTime,
-                unreadCount: room.unreadCount,
-                participantCount: room.currentParticipants,
-                maxParticipants: room.maxParticipants,
-                isActive: room.isActive,
-                tags: room.tags
-              }}
-              type="group"
-              showInactiveOverlay={true}
-            />
-          ))}
+          {subTab === 'group' && joinedChatRooms.group.map(room => {
+            const formatParticipantNames = (names) => {
+              if (!names) return '';
+              const participants = names.split(',');
+              if (participants.length > 3) {
+                return `${participants.slice(0, 3).join(',')}, ...`;
+              }
+              return names;
+            };
+
+            return (
+              <ChatRoomCard 
+                key={room.roomId}
+                room={{
+                  id: room.roomId,
+                  name: room.roomName !== null ? room.roomName : formatParticipantNames(room.participantNames),
+                  lastMessage: room.latestMessage,
+                  lastMessageTime: room.lastMessageTime,
+                  unreadCount: room.unreadCount,
+                  participantCount: room.participantCount,
+                  maxParticipants: room.maxParticipants,
+                  isActive: room.isActive
+                }}
+                type="group"
+                showInactiveOverlay={true}
+              />
+            );
+          })}
           {subTab === 'open' && joinedChatRooms.open.map(room => (
             <ChatRoomCard 
               key={room.roomId}
@@ -179,10 +187,9 @@ const Home = ({ isLoggedIn, userInfo }) => {
                 lastMessage: room.latestMessage,
                 lastMessageTime: room.lastMessageTime,
                 unreadCount: room.unreadCount,
-                participantCount: room.currentParticipants,
+                participantCount: room.participantCount,
                 maxParticipants: room.maxParticipants,
-                isActive: room.isActive,
-                tags: room.tags
+                isActive: room.isActive
               }}
               type="open"
               showInactiveOverlay={true}
@@ -211,7 +218,8 @@ const Home = ({ isLoggedIn, userInfo }) => {
             key={room.id}
             room={room}
             type="open"
-            showInactiveOverlay={false}
+            showInactiveOverlay={true}
+            userInfo={userInfo}
           />
         ))}
       </div>
@@ -296,79 +304,156 @@ const formatMessageTime = (timestamp) => {
   }
 };
 
+// JoinChatRoomModal 컴포넌트 추가
+const JoinChatRoomModal = ({ room, onClose, userInfo }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleJoin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/chat-rooms/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          roomId: room.id,
+          userIdx: userInfo.userIdx,
+          password: room.hasPassword ? password : null
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || '채팅방 참여에 실패했습니다.');
+      }
+
+      if (result.success) {
+        window.location.href = `/chat/${room.id}?isActive=${room.isActive}`;
+      }
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  return (
+    <div className="create-chat-modal-overlay">
+      <div className="create-chat-modal-content">
+        <h2>{room.name}</h2>
+        <form onSubmit={handleJoin}>
+          {room.hasPassword && (
+            <div className="create-chat-form-group">
+              <label>비밀번호</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          )}
+          {error && <p className="error-message">{error}</p>}
+          <div className="create-chat-modal-buttons">
+            <button type="submit">참여하기</button>
+            <button type="button" className="cancel-button" onClick={onClose}>
+              취소
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // ChatRoomCard 컴포넌트 수정
-const ChatRoomCard = ({ room, type, showInactiveOverlay }) => {
+const ChatRoomCard = ({ room, type, showInactiveOverlay, userInfo }) => {
   const navigate = useNavigate();
+  const [showJoinModal, setShowJoinModal] = useState(false);
+
+  const truncateMessage = (message, maxLength = 15) => {
+    if (!message) return '';
+    return message.length > maxLength 
+      ? `${message.substring(0, maxLength)}......` 
+      : message;
+  };
 
   const handleClick = (e) => {
     e.preventDefault();
     
-    if (window.chatWebSocket) {
-      window.chatWebSocket.deactivate();
+    if (type === 'open') {
+      setShowJoinModal(true);
+    } else {
+      if (window.chatWebSocket) {
+        window.chatWebSocket.deactivate();
+      }
+      setTimeout(() => {
+        window.location.href = `/chat/${room.id}?isActive=${room.isActive}`;
+      }, 100);
     }
-
-    setTimeout(() => {
-      window.location.href = `/chat/${room.id}?isActive=${room.isActive}`;
-    }, 100);
   };
 
   return (
-    <div 
-      onClick={handleClick} 
-      className={`chat-room-card-link ${!room.isActive && showInactiveOverlay ? 'inactive' : ''}`}
-    >
-      <div className="chat-room-card">
-        {!room.isActive && showInactiveOverlay && (
-          <div className="inactive-overlay">
-            비활성화된 채팅방입니다
-          </div>
-        )}
-        <div className="room-header">
-          <div className="room-title">
-            <div className="room-icon">
-              {type === 'direct' ? '👤' : type === 'group' ? '👥' : '🌐'}
+    <>
+      <div 
+        onClick={handleClick} 
+        className={`chat-room-card-link ${!room.isActive && showInactiveOverlay ? 'inactive' : ''}`}
+      >
+        <div className="chat-room-card">
+          {!room.isActive && showInactiveOverlay && (
+            <div className="inactive-overlay">
+              비활성화된 채팅방입니다
             </div>
-            <h3>
-              {room.name}
-              {type === 'open' && room.hasPassword && (
-                <span className="lock-icon">🔒</span>
-              )}
-            </h3>
-          </div>
-          {room.unreadCount > 0 && (
-            <span className="unread-count">{room.unreadCount}</span>
           )}
-        </div>
-        
-        <div className="room-content">
-          <p className="description">
-            {room.lastMessage}
-          </p>
-        </div>
-        
-        <div className="room-footer">
-          <div className="room-info">
-            <span className="time">
-              {formatMessageTime(room.lastMessageTime)}
-            </span>
-            {(type === 'group' || type === 'open') && (
-              <span className="participant-count">
-                <span className="icon">👥 </span>
-                {room.participantCount}/{room.maxParticipants}
-              </span>
+          <div className="room-header">
+            <div className="room-title">
+              <div className="room-icon">
+                {type === 'direct' ? '👤' : type === 'group' ? '👥' : '🌐'}
+              </div>
+              <h3>
+                {room.name}
+                {type === 'open' && room.hasPassword && (
+                  <span className="lock-icon">🔒</span>
+                )}
+              </h3>
+            </div>
+            {room.unreadCount > 0 && (
+              <span className="unread-count">{room.unreadCount}</span>
             )}
           </div>
-
-          {room.tags && (
-            <div className="room-tags">
-              {room.tags.map(tag => (
-                <span key={tag} className="tag">#{tag}</span>
-              ))}
+          
+          <div className="room-content">
+            <p className="description">
+              {truncateMessage(room.lastMessage)}
+            </p>
+          </div>
+          
+          <div className="room-footer">
+            <div className="room-info">
+              <span className="time">
+                {formatMessageTime(room.lastMessageTime)}
+              </span>
+              {(type === 'group' || type === 'open') && (
+                <span className="participant-count">
+                  <span className="icon">👥 </span>
+                  {room.participantCount}/{room.maxParticipants}
+                </span>
+              )}
             </div>
-          )}
+
+            
+          </div>
         </div>
       </div>
-    </div>
+      {showJoinModal && (
+        <JoinChatRoomModal
+          room={room}
+          onClose={() => setShowJoinModal(false)}
+          userInfo={userInfo}
+        />
+      )}
+    </>
   );
 };
 

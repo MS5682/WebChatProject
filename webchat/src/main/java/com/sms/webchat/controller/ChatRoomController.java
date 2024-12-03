@@ -17,6 +17,7 @@ import com.sms.webchat.dto.request.ChatRoomCreateRequestDTO;
 import com.sms.webchat.dto.request.ReadTimeRequestDTO;
 import com.sms.webchat.dto.response.ApiResponseDto;
 import com.sms.webchat.dto.MessageDTO;
+import com.sms.webchat.dto.request.ChatRoomJoinRequestDTO;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Map;
@@ -30,22 +31,36 @@ public class ChatRoomController {
     
     @GetMapping("/user/{userIdx}")
     public ResponseEntity<List<ChatRoomListDTO>> getChatRoomList(@PathVariable Long userIdx) {
-        List<ChatRoomListDTO> chatRooms = chatRoomService.getChatRoomsByUserIdx(userIdx);
-        return ResponseEntity.ok(chatRooms);
+        try {
+            List<ChatRoomListDTO> chatRooms = chatRoomService.getChatRoomsByUserIdx(userIdx);
+            return ResponseEntity.ok(chatRooms);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
     @GetMapping("/public")
-    public ResponseEntity<List<PublicGroupChatRoomDTO>> getPublicGroupChatRooms() {
-        List<PublicGroupChatRoomDTO> publicGroupChatRooms = chatRoomService.getPublicGroupChatRooms();
-        return ResponseEntity.ok(publicGroupChatRooms);
+    public ResponseEntity<List<PublicGroupChatRoomDTO>> getPublicGroupChatRooms(
+            @RequestParam Long userIdx) {
+        try {
+            List<PublicGroupChatRoomDTO> publicGroupChatRooms = 
+                chatRoomService.getPublicGroupChatRooms(userIdx);
+            return ResponseEntity.ok(publicGroupChatRooms);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
     @GetMapping("/participant/{roomId}")
     public ResponseEntity<List<ChatRoomParticipantDTO>> getChatRoomParticipants(@PathVariable Long roomId) {
-        
-        List<ChatRoomParticipantDTO> participants = chatRoomService.getChatRoomParticipants(roomId);
-        return ResponseEntity.ok(participants);
-    }
+        try {
+            List<ChatRoomParticipantDTO> participants = 
+                chatRoomService.getChatRoomParticipants(roomId);
+            return ResponseEntity.ok(participants);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }   
 
     @PostMapping("/read")
     public ResponseEntity<?> updateLastReadTime(@RequestBody ReadTimeRequestDTO requestDTO) {
@@ -111,6 +126,18 @@ public class ChatRoomController {
             Long roomId = chatRoomService.createChatRoom(requestDTO);
             return ResponseEntity.ok()
                 .body(new ApiResponseDto(true, "채팅방이 생성되었습니다.", roomId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body(new ApiResponseDto(false, e.getMessage()));
+        }
+    }
+
+    @PostMapping("/join")
+    public ResponseEntity<?> joinChatRoom(@RequestBody ChatRoomJoinRequestDTO requestDTO) {
+        try {
+            chatRoomService.joinChatRoom(requestDTO);
+            return ResponseEntity.ok()
+                .body(new ApiResponseDto(true, "채팅방에 참여했습니다."));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                 .body(new ApiResponseDto(false, e.getMessage()));

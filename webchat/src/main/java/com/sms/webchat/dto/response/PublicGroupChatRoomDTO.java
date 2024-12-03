@@ -2,16 +2,18 @@ package com.sms.webchat.dto.response;
 
 import java.time.LocalDateTime;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.*;
 
 @Getter
+@NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class PublicGroupChatRoomDTO {
     private Long id;
     private String name;
     private Integer maxParticipants;
-    private Long currentParticipants;
+    private Long participantCount;
     private LocalDateTime lastMessageTime;
-    private boolean hasPassword;
+    private Boolean hasPassword;
+    private Boolean isActive;
 } 

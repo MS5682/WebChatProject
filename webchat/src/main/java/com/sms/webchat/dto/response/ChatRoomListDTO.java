@@ -21,7 +21,7 @@ public class ChatRoomListDTO {
     private RoomType roomType;
     private int maxParticipants;
     private Boolean isActive;
-    private long currentParticipants;
+    private long participantCount;
     private String latestMessage;
     private LocalDateTime lastMessageTime;
     private long unreadCount;
