@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect} from 'react';
 import '../styles/FriendRequests.css';
-import { Client } from '@stomp/stompjs';
+import { fetchWithToken } from './App';
 
 function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
   const [activeTab, setActiveTab] = useState('friends');
@@ -11,8 +11,6 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
   const [searchUserId, setSearchUserId] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [searchError, setSearchError] = useState('');
-  const clientRef = useRef(null);
-
   useEffect(() => {
     if (isLoggedIn && userInfo) {
       fetchFriendships();
@@ -22,7 +20,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const fetchFriendships = async () => {
     try {
-      const response = await fetch(`/friendship/list/${userInfo.userIdx}`);
+      const response = await fetchWithToken(`/friendship/list/${userInfo.userIdx}`);
       const friendships = await response.json();
       
       const newFriends = [];
@@ -85,7 +83,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const handleAccept = async (requestId) => {
     try {
-      const response = await fetch(`/friendship/response?friendshipId=${requestId}&status=ACCEPTED`, {
+      const response = await fetchWithToken(`/friendship/response?friendshipId=${requestId}&status=ACCEPTED`, {
         method: 'POST'
       });
 
@@ -122,7 +120,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const handleReject = async (requestId) => {
     try {
-      const response = await fetch(`/friendship/response?friendshipId=${requestId}&status=REJECTED`, {
+      const response = await fetchWithToken(`/friendship/response?friendshipId=${requestId}&status=REJECTED`, {
         method: 'POST'
       });
 
@@ -145,7 +143,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const handleBlock = async (requestId) => {
     try {
-      const response = await fetch(`/friendship/response?friendshipId=${requestId}&status=BLOCKED&userIdx=${userInfo.userIdx}`, {
+      const response = await fetchWithToken(`/friendship/response?friendshipId=${requestId}&status=BLOCKED&userIdx=${userInfo.userIdx}`, {
         method: 'POST'
       });
 
@@ -168,7 +166,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const handleDeleteFriend = async (friendId) => {
     try {
-      const response = await fetch(`/friendship/response?friendshipId=${friendId}&status=REJECTED`, {
+      const response = await fetchWithToken(`/friendship/response?friendshipId=${friendId}&status=REJECTED`, {
         method: 'POST'
       });
 
@@ -191,7 +189,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const handleBlockFriend = async (friendId) => {
     try {
-      const response = await fetch(`/friendship/response?friendshipId=${friendId}&status=BLOCKED`, {
+      const response = await fetchWithToken(`/friendship/response?friendshipId=${friendId}&status=BLOCKED`, {
         method: 'POST'
       });
 
@@ -215,7 +213,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
   const handleSearch = async () => {
     try {
       setSearchError('');
-      const response = await fetch(`/friendship/find?keyword=${searchUserId}`);
+      const response = await fetchWithToken(`/friendship/find?keyword=${searchUserId}`);
       const users = await response.json();
       
       if (!response.ok) {
@@ -250,7 +248,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
     try {
       if (!searchResult) return;
       
-      const response = await fetch(`/friendship/request?fromUserIdx=${userInfo.userIdx}&toUserIdx=${searchResult.idx}`, {
+      const response = await fetchWithToken(`/friendship/request?fromUserIdx=${userInfo.userIdx}&toUserIdx=${searchResult.idx}`, {
         method: 'POST',
       });
 
@@ -288,7 +286,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const handleChatStart = async (friendIdx) => {
     try {
-      const response = await fetch(`/chat-rooms/private?userIdx=${userInfo.userIdx}&friendIdx=${friendIdx}`, {
+      const response = await fetchWithToken(`/chat-rooms/private?userIdx=${userInfo.userIdx}&friendIdx=${friendIdx}`, {
         method: 'POST'
       });
 
@@ -310,7 +308,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const handleUnblock = async (friendshipId) => {
     try {
-      const response = await fetch(`/friendship/response?friendshipId=${friendshipId}&status=REJECTED`, {
+      const response = await fetchWithToken(`/friendship/response?friendshipId=${friendshipId}&status=REJECTED`, {
         method: 'POST'
       });
 

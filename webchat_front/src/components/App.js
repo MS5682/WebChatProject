@@ -12,6 +12,24 @@ import FriendRequests from './FriendRequests';
 import '../styles/App.css';
 import { Client } from '@stomp/stompjs';
 
+// fetchWithToken 함수 추가
+export const fetchWithToken = async (url, options = {}) => {
+  if (url.startsWith('/user/') || url.startsWith('/email/')) {
+    return fetch(url, options);
+  }
+
+  const token = localStorage.getItem('token');
+  const headers = {
+    ...options.headers,
+    'Authorization': `${token}`,
+  };
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+};
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userInfo, setUserInfo] = useState({
@@ -49,7 +67,6 @@ function App() {
       
       if (!response.ok) {
         const errorText = await response.text();
-        
         try {
           const errorJson = JSON.parse(errorText);
           throw new Error(errorJson.message || '인증 실패');
@@ -59,7 +76,6 @@ function App() {
       }
 
       const responseData = await response.json();
-      
       setUserInfo({
         name: responseData.name,
         userId: responseData.userId,

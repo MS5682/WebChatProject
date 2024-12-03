@@ -29,14 +29,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
         .addPathPatterns("/**")   
         .excludePathPatterns(      
             "/user/**",          
-            "/email/**",           
-            "/ws/**",              
-            "/chat-rooms/**",
-            "/chat/upload/**",
-            "/files/**",
-            "/friendship/**"
+            "/email/**"     
         );
-
     }
 
     @Override

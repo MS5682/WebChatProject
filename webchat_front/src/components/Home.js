@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Home.css';
 import CreateChatRoomModal from './CreateChatRoomModal';
+import { fetchWithToken } from './App';
 
 const Home = ({ isLoggedIn, userInfo }) => {
   const [activeTab, setActiveTab] = useState('joined');
@@ -70,7 +71,7 @@ const Home = ({ isLoggedIn, userInfo }) => {
 
   const fetchChatRooms = async () => {
     try {
-      const response = await fetch('/chat-rooms/user/'+userInfo.userIdx);
+      const response = await fetchWithToken('/chat-rooms/user/'+userInfo.userIdx);
       const chatRooms = await response.json();
 
       const sortedRooms = {
@@ -87,7 +88,7 @@ const Home = ({ isLoggedIn, userInfo }) => {
 
   const fetchPublicChatRooms = async () => {
     try {
-      const response = await fetch(`/chat-rooms/public?userIdx=${userInfo.userIdx}`);
+      const response = await fetchWithToken(`/chat-rooms/public?userIdx=${userInfo.userIdx}`);
       const publicRooms = await response.json();
       console.log('publicRooms', publicRooms);
       setOpenChatRooms(publicRooms);
@@ -312,7 +313,7 @@ const JoinChatRoomModal = ({ room, onClose, userInfo }) => {
   const handleJoin = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('/chat-rooms/join', {
+      const response = await fetchWithToken('/chat-rooms/join', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

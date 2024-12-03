@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/CreateChatRoomModal.css';
+import { fetchWithToken } from './App';
 
 const CreateChatRoomModal = ({ type, onClose, userInfo }) => {
   const [step, setStep] = useState(1); // 1: 채팅방 설정, 2: 친구선택
@@ -15,7 +16,7 @@ const CreateChatRoomModal = ({ type, onClose, userInfo }) => {
     if (type === 'group') {
       const fetchFriendsList = async () => {
         try {
-          const response = await fetch(`/friendship/list/${userInfo.userIdx}?status=ACCEPTED`);
+          const response = await fetchWithToken(`/friendship/list/${userInfo.userIdx}?status=ACCEPTED`);
           const friendships = await response.json();
           
           const friends = friendships.map(friendship => {
@@ -48,7 +49,7 @@ const CreateChatRoomModal = ({ type, onClose, userInfo }) => {
     };
 
     try {
-      const response = await fetch('/chat-rooms/create', {
+      const response = await fetchWithToken('/chat-rooms/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

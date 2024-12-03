@@ -3,6 +3,7 @@ import { Client } from '@stomp/stompjs';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { FiPaperclip, FiImage, FiArrowLeft } from 'react-icons/fi';
 import '../styles/ChatRoom.css';
+import {fetchWithToken} from './App'
 
 function useChatRoom(userInfo) {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ function useChatRoom(userInfo) {
 
   const fetchParticipants = useCallback(async () => {
     try {
-      const response = await fetch(`/chat-rooms/participant/${roomId}`);
+      const response = await fetchWithToken(`/chat-rooms/participant/${roomId}`);
       if (!response.ok) {
         throw new Error('참여자 목록을 불러오는데 실패했습니다.');
       }
@@ -47,7 +48,7 @@ function useChatRoom(userInfo) {
 
   const fetchLastReadTimes = useCallback(async () => {
     try {
-      const response = await fetch(`/chat-rooms/${roomId}/last-read-times`);
+      const response = await fetchWithToken(`/chat-rooms/${roomId}/last-read-times`);
       if (!response.ok) throw new Error('Failed to fetch last read times');
       const times = await response.json();
       setLastReadTimes(times);
@@ -58,7 +59,7 @@ function useChatRoom(userInfo) {
 
   const updateLastReadTime = useCallback(async () => {
     try {
-      const response = await fetch('/chat-rooms/read', {
+      const response = await fetchWithToken('/chat-rooms/read', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +87,7 @@ function useChatRoom(userInfo) {
     }
 
     try {
-      const lastReadResponse = await fetch(`/chat-rooms/${roomId}/last-read-times`);
+      const lastReadResponse = await fetchWithToken(`/chat-rooms/${roomId}/last-read-times`);
       if (!lastReadResponse.ok) {
         throw new Error('마지막 읽은 시간 로드 실패');
       }
@@ -420,7 +421,7 @@ function useChatRoom(userInfo) {
 
 
     try {
-      const response = await fetch('/chat/upload', {
+      const response = await fetchWithToken('/chat/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include'
@@ -470,7 +471,7 @@ function useChatRoom(userInfo) {
     }
 
     try {
-      const response = await fetch(`/chat-rooms/${roomId}/quit/${userInfo.userIdx}`, {
+      const response = await fetchWithToken(`/chat-rooms/${roomId}/quit/${userInfo.userIdx}`, {
         method: 'DELETE'
       });
 
@@ -594,7 +595,7 @@ const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
 const Message = ({ message, isMe, unreadCount }) => {
   const handleDownload = async (fileUrl, fileName) => {
     try {
-      const response = await fetch(fileUrl);
+      const response = await fetchWithToken(fileUrl);
       const blob = await response.blob();
       
       // 다운로드 링크 생성
