@@ -45,13 +45,12 @@ public class MessageRepositoryImpl implements MessageRepositoryCustom {
         QMessage message = QMessage.message;
         QMessageAttachment attachment = QMessageAttachment.messageAttachment;
         
-        System.out.println("Executing query with roomId: " + roomId + ", lastReadTime: " + lastReadTime);
         
         try {
             List<MessageDTO> results = queryFactory
                 .select(Projections.constructor(MessageDTO.class,
                     message.content,
-                    message.sender.name,
+                    message.sender.name.coalesce("system"),
                     Expressions.constant(MessageDTO.MessageType.CHAT),
                     message.createdAt.stringValue(),
                     message.room.id.stringValue(),
@@ -60,7 +59,7 @@ public class MessageRepositoryImpl implements MessageRepositoryCustom {
                     attachment.type))
                 .from(message)
                 .leftJoin(attachment).on(attachment.message.eq(message))
-                .join(message.sender)
+                .leftJoin(message.sender)
                 .join(message.room)
                 .where(message.room.id.eq(roomId)
                     .and(message.createdAt.after(lastReadTime)))

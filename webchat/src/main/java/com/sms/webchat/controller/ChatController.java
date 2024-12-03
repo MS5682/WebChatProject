@@ -50,6 +50,7 @@ public class ChatController {
     @MessageMapping("/chat.room/{roomId}/send")
     public void sendMessage(@Payload MessageDTO messageDTO, 
                           @DestinationVariable String roomId) {
+        
         User sender = userService.findByName(messageDTO.getSender());
         ChatRoom room = chatRoomService.findById(Long.parseLong(messageDTO.getRoomId()));
         
@@ -64,7 +65,13 @@ public class ChatController {
         } else {
             responseDTO = messageMapper.toDto(message);
         }
+
+        if(messageDTO.getType() == MessageDTO.MessageType.SYSTEM) {
+            responseDTO.setType(MessageDTO.MessageType.SYSTEM);
+        }
         
+        System.out.println("responseDTO: " + responseDTO);
+
         // 채팅방에 메시지 전송
         messagingTemplate.convertAndSend("/topic/room/" + roomId, responseDTO);
         

@@ -23,6 +23,6 @@ public class MessageDTO {
     private String fileType;
     
     public enum MessageType {
-        CHAT, FILE
+        CHAT, FILE, SYSTEM
     }
 } 

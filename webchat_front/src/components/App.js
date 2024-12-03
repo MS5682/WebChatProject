@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Header from './Header';
-import Footer from './Footer';
 import Home from './Home';
 import ChatRoom from './ChatRoom';
 import Login from './Login';
@@ -53,7 +52,6 @@ function App() {
   });
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isFriendsListOpen, setIsFriendsListOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const clientRef = useRef(null);
 
@@ -127,7 +125,6 @@ function App() {
       heartbeatOutgoing: 4000,
       onConnect: () => {
         console.log('WebSocket Connected!');
-        setIsOnline(true);
         
         // 온라인 상태 알림
         client.publish({
@@ -175,7 +172,6 @@ function App() {
       },
       onDisconnect: () => {
         console.log('WebSocket Disconnected!');
-        setIsOnline(false);
       }
     });
 
@@ -184,7 +180,6 @@ function App() {
       clientRef.current = client;
     } catch (error) {
       console.error('Connection error:', error);
-      setIsOnline(false);
     }
   }, []);
 
@@ -288,7 +283,6 @@ function App() {
           </Routes>
         </div>
       </div>
-      {/* <Footer /> */}
     </div>
   );
 }

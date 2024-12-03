@@ -11,7 +11,7 @@ function useChatRoom(userInfo) {
   const location = useLocation();
   const isActive = new URLSearchParams(location.search).get('isActive') === 'true';
   const roomType = new URLSearchParams(location.search).get('roomType');
-  const [readOnlyMode, setReadOnlyMode] = useState(!isActive);
+  const [readOnlyMode] = useState(!isActive);
   
   const [messages, setMessages] = useState(() => {
     const cached = localStorage.getItem(`chat-messages-${roomId}`);
@@ -34,6 +34,7 @@ function useChatRoom(userInfo) {
   const startWidth = useRef(0);
   const isFirstLoad = useRef(true);
 
+  
   const fetchParticipants = useCallback(async () => {
     try {
       const response = await fetchWithToken(`/chat-rooms/participant/${roomId}`);
@@ -100,7 +101,7 @@ function useChatRoom(userInfo) {
         throw new Error('읽지 않은 메시지 로드 실패');
       }
       const unreadMessages = await response.json();
-      
+      console.log(unreadMessages);
       if (unreadMessages.length > 0) {
         setMessages(prevMessages => [
           ...prevMessages,
@@ -148,7 +149,9 @@ function useChatRoom(userInfo) {
             console.log(message);
             const receivedMessage = JSON.parse(message.body);
             
-            if (receivedMessage.sender !== userInfo.name) {
+            if (receivedMessage.type === 'SYSTEM') {
+              setMessages(prevMessages => [...prevMessages, receivedMessage]);
+            } else if (receivedMessage.sender !== userInfo.name) {
               setMessages(prevMessages => [...prevMessages, receivedMessage]);
               updateLastReadTime();
             }
@@ -472,6 +475,22 @@ function useChatRoom(userInfo) {
     }
 
     try {
+      // 시스템 메시지 전송
+      const systemMessage = {
+        type: 'SYSTEM',
+        content: `${userInfo.name}님이 나가셨습니다.`,
+        sender: null,
+        roomId: roomId,
+        time: new Date().toISOString()
+      };
+
+      // WebSocket으로 시스템 메시지 전송
+      await Promise.resolve(clientRef.current.publish({
+        destination: `/app/chat.room/${roomId}/send`,
+        body: JSON.stringify(systemMessage)
+      }));
+
+      // 채팅방 나가기 요청
       const response = await fetchWithToken(`/chat-rooms/${roomId}/quit/${userInfo.userIdx}`, {
         method: 'POST'
       });
@@ -494,7 +513,7 @@ function useChatRoom(userInfo) {
       console.error('채팅방 나가기 중 오류:', error);
       alert('채팅방 나가기에 실패했습니다.');
     }
-  }, [roomId, userInfo.userIdx, navigate]);
+  }, [roomId, userInfo, navigate]);
 
   useEffect(() => {
     if (!isActive) {
@@ -530,7 +549,10 @@ function useChatRoom(userInfo) {
     readOnlyMode,
     isActive,
     roomType,
-    roomId
+    roomId,
+    clientRef,
+    setMessages,
+    updateLastReadTime
   };
 }
 
@@ -553,7 +575,7 @@ const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
     
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      alert('파일 크��는 10MB를 초과할 수 없습니다.');
+      alert('파일 크기는 10MB를 초과할 수 없습니다.');
       return;
     }
     
@@ -619,6 +641,7 @@ const Message = ({ message, isMe, unreadCount }) => {
 
   const renderContent = () => {
     switch (message.type) {
+      case 'SYSTEM':
       case 'NOTIFICATION':
       case 'UNREAD_MARKER':
         return (
@@ -654,7 +677,7 @@ const Message = ({ message, isMe, unreadCount }) => {
     }
   };
 
-  if (message.type === 'NOTIFICATION' || message.type === 'UNREAD_MARKER') {
+  if (message.type === 'SYSTEM' || message.type === 'NOTIFICATION' || message.type === 'UNREAD_MARKER') {
     return (
       <div className={`message system ${message.type.toLowerCase()}`}>
         {renderContent()}
@@ -747,7 +770,7 @@ const SearchBar = ({
 };
 
 // InviteFriendsModal 컴포넌트 수정
-const InviteFriendsModal = ({ onClose, roomId, userInfo, participants }) => {
+const InviteFriendsModal = ({ onClose, roomId, userInfo, participants, clientRef, setMessages, updateLastReadTime }) => {
   const [friends, setFriends] = useState([]);
   const [selectedFriends, setSelectedFriends] = useState([]);
   const [error, setError] = useState('');
@@ -789,6 +812,7 @@ const InviteFriendsModal = ({ onClose, roomId, userInfo, participants }) => {
     }
 
     try {
+      // 초대 요청
       const response = await fetchWithToken('/chat-rooms/invite', {
         method: 'POST',
         headers: {
@@ -801,6 +825,33 @@ const InviteFriendsModal = ({ onClose, roomId, userInfo, participants }) => {
       });
 
       if (!response.ok) throw new Error('친구 초대에 실패했습니다.');
+      
+      // 시스템 메시지 전송
+      const invitedUsers = friends
+        .filter(friend => selectedFriends.includes(friend.userIdx))
+        .map(friend => friend.name);
+
+      const systemMessage = {
+        type: 'SYSTEM',
+        content: `${invitedUsers.join(', ')}님이 초대되었습니다.`,
+        sender: null,
+        roomId: roomId,
+        time: new Date().toISOString()
+      };
+
+      setMessages(prevMessages => [...prevMessages, systemMessage]);
+
+      // WebSocket으로 시스템 메시지 전송
+      if (clientRef.current) {  // clientRef 존재 여부 확인
+        await Promise.resolve(clientRef.current.publish({
+          destination: `/app/chat.room/${roomId}/send`,
+          body: JSON.stringify(systemMessage)
+        }));
+      }
+
+      setTimeout(async () => {
+        await updateLastReadTime();
+      }, 100);
       
       onClose();
     } catch (error) {
@@ -878,7 +929,10 @@ function ChatRoom({ userInfo }) {
     readOnlyMode,
     isActive,
     roomType,
-    roomId
+    roomId,
+    clientRef,
+    setMessages,
+    updateLastReadTime
   } = useChatRoom(userInfo);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -984,6 +1038,9 @@ function ChatRoom({ userInfo }) {
           roomId={roomId}
           userInfo={userInfo}
           participants={participants}
+          clientRef={clientRef}
+          setMessages={setMessages}
+          updateLastReadTime={updateLastReadTime}
         />
       )}
     </div>

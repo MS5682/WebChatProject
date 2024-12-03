@@ -90,7 +90,7 @@ public class UserService {
 
     public User findByName(String name) {
         return userRepository.findByName(name)
-            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+            .orElse(null);
     }
 
     public List<UserDTO> findUsersByIdLike(String keyword) {

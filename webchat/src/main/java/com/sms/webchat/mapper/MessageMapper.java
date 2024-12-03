@@ -22,7 +22,7 @@ public class MessageMapper {
     public MessageDTO toDto(Message message) {
         return MessageDTO.builder()
             .content(message.getContent())
-            .sender(message.getSender().getName())
+            .sender(message.getSender() != null ? message.getSender().getName() : "system")
             .time(message.getCreatedAt().toString())
             .roomId(message.getRoom().getId().toString())
             .type(MessageDTO.MessageType.CHAT)

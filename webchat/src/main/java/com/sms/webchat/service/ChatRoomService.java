@@ -19,8 +19,8 @@ import com.sms.webchat.entity.User;
 import com.sms.webchat.repository.UserRepository;
 import com.sms.webchat.enums.RoomType;
 import com.sms.webchat.dto.request.ChatRoomCreateRequestDTO;
-import com.sms.webchat.dto.request.ChatRoomJoinRequestDTO;
 import com.sms.webchat.dto.request.ChatRoomInviteRequestDTO;
+import com.sms.webchat.dto.request.ChatRoomJoinRequestDTO;
 
 import lombok.RequiredArgsConstructor;
 
@@ -82,7 +82,15 @@ public class ChatRoomService {
         if (lastReadTime == null) {
             lastReadTime = participant.getJoinedAt(); // 참여 시점부터의 메시지 조회
         }
+
+        System.out.println("lastReadTime: " + lastReadTime);
         List<MessageDTO> unreadMessages = messageRepository.findMessagesWithAttachments(roomId, lastReadTime);
+        unreadMessages.forEach(message -> {
+            System.out.println(message);
+            if(message.getSender().equals("system")) {
+                message.setType(MessageDTO.MessageType.SYSTEM);
+            }
+        });
         return unreadMessages;
     }
 
@@ -112,14 +120,17 @@ public class ChatRoomService {
         
         // 남은 참여자 수 확인
         int remainingParticipants = roomParticipantRepository.countByRoomId(roomId);
-        if (remainingParticipants == 0) {
-            chatRoomRepository.delete(chatRoom);
-            return;
-        }
-        
-        if (chatRoom.getRoomType() != RoomType.PUBLIC_GROUP && remainingParticipants == 1) {
-            chatRoom.deactivate();
-            chatRoomRepository.save(chatRoom);
+        if(chatRoom.getRoomType() == RoomType.PRIVATE_CHAT) {
+            if (remainingParticipants == 0) {
+                chatRoomRepository.delete(chatRoom);
+            }
+        }else {
+            if (remainingParticipants == 1) {
+                chatRoom.deactivate();  
+                chatRoomRepository.save(chatRoom);
+            }else if(remainingParticipants == 0) {
+                chatRoomRepository.delete(chatRoom);
+            }
         }
     }
 
@@ -271,5 +282,4 @@ public class ChatRoomService {
 
         roomParticipantRepository.saveAll(newParticipants);
     }
-
 } 
