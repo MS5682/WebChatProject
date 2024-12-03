@@ -18,6 +18,7 @@ import com.sms.webchat.dto.request.ReadTimeRequestDTO;
 import com.sms.webchat.dto.response.ApiResponseDto;
 import com.sms.webchat.dto.MessageDTO;
 import com.sms.webchat.dto.request.ChatRoomJoinRequestDTO;
+import com.sms.webchat.dto.request.ChatRoomInviteRequestDTO;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Map;
@@ -143,4 +144,17 @@ public class ChatRoomController {
                 .body(new ApiResponseDto(false, e.getMessage()));
         }
     }
+
+    @PostMapping("/invite")
+    public ResponseEntity<?> inviteParticipants(@RequestBody ChatRoomInviteRequestDTO requestDTO) {
+        try {
+            chatRoomService.inviteParticipants(requestDTO);
+            return ResponseEntity.ok()
+                .body(new ApiResponseDto(true, "초대가 완료되었습니다."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body(new ApiResponseDto(false, e.getMessage()));
+        }
+    }
+
 }

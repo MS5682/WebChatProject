@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import Home from './Home';
@@ -28,6 +28,19 @@ export const fetchWithToken = async (url, options = {}) => {
     ...options,
     headers,
   });
+};
+
+// ProtectedRoute 컴포넌트 추가
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  const location = useLocation();
+
+  // 토큰이 없고 현재 경로가 루트가 아닌 경우 루트로 리다이렉트
+  if (!token && location.pathname !== '/') {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 };
 
 function App() {
@@ -252,21 +265,25 @@ function App() {
               />
             } />
             <Route path="/chat/:roomId" element={
-              <ChatRoom 
-                userInfo={userInfo} 
-                onlineUsers={onlineUsers}
-              />
+              <ProtectedRoute>
+                <ChatRoom 
+                  userInfo={userInfo} 
+                  onlineUsers={onlineUsers}
+                />
+              </ProtectedRoute>
             } />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/find-id" element={<FindId />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/friend-requests" element={
-              <FriendRequests 
-                isLoggedIn={isLoggedIn} 
-                userInfo={userInfo}
-                onlineUsers={onlineUsers}
-              />
+              <ProtectedRoute>
+                <FriendRequests 
+                  isLoggedIn={isLoggedIn} 
+                  userInfo={userInfo}
+                  onlineUsers={onlineUsers}
+                />
+              </ProtectedRoute>
             } />
           </Routes>
         </div>

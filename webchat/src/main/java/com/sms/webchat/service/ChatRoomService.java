@@ -20,6 +20,7 @@ import com.sms.webchat.repository.UserRepository;
 import com.sms.webchat.enums.RoomType;
 import com.sms.webchat.dto.request.ChatRoomCreateRequestDTO;
 import com.sms.webchat.dto.request.ChatRoomJoinRequestDTO;
+import com.sms.webchat.dto.request.ChatRoomInviteRequestDTO;
 
 import lombok.RequiredArgsConstructor;
 
@@ -111,8 +112,13 @@ public class ChatRoomService {
         
         // 남은 참여자 수 확인
         int remainingParticipants = roomParticipantRepository.countByRoomId(roomId);
-        if (remainingParticipants <= 1) {
-            chatRoom.deactivate();  // ChatRoom 엔티티의 메서드 사용
+        if (remainingParticipants == 0) {
+            chatRoomRepository.delete(chatRoom);
+            return;
+        }
+        
+        if (chatRoom.getRoomType() != RoomType.PUBLIC_GROUP && remainingParticipants == 1) {
+            chatRoom.deactivate();
             chatRoomRepository.save(chatRoom);
         }
     }
@@ -232,6 +238,38 @@ public class ChatRoomService {
             .build();
         
         roomParticipantRepository.save(participant);
+    }
+
+    @Transactional
+    public void inviteParticipants(ChatRoomInviteRequestDTO requestDTO) {
+        ChatRoom chatRoom = chatRoomRepository.findById(requestDTO.getRoomId())
+            .orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다."));
+
+        // 현재 참여자 수 확인
+        int currentParticipants = roomParticipantRepository.countByRoomId(requestDTO.getRoomId());
+        if (currentParticipants + requestDTO.getParticipantList().size() > chatRoom.getMaxParticipants()) {
+            throw new RuntimeException("채팅방 최대 인원을 초과할 수 없습니다.");
+        }
+
+        List<RoomParticipant> newParticipants = requestDTO.getParticipantList().stream()
+            .map(userIdx -> {
+                User user = userRepository.findById(userIdx)
+                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+                // 이미 참여중인지 확인
+                if (roomParticipantRepository.existsByRoomAndUser(chatRoom, user)) {
+                    throw new RuntimeException("이미 참여중인 사용자가 포함되어 있습니다: " + user.getName());
+                }
+
+                return RoomParticipant.builder()
+                    .room(chatRoom)
+                    .user(user)
+                    .lastReadTime(LocalDateTime.now())
+                    .build();
+            })
+            .collect(Collectors.toList());
+
+        roomParticipantRepository.saveAll(newParticipants);
     }
 
 } 

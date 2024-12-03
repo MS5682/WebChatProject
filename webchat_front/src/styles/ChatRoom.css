@@ -7,12 +7,11 @@
 }
 
 .user-list {
-  width: 200px;
   border-right: 1px solid #e6e6e6;
   background: #f8f9fa;
   height: 100%;
   position: relative;
-  min-width: 150px;
+  min-width: 280px;
   max-width: 400px;
   transition: width 0.1s ease;
 }
@@ -622,4 +621,46 @@
 
 .chat-container:not(:has(.read-only-banner)) {
   padding-top: 0;
+}
+
+/* 초대 버튼 스타일 추가 */
+.invite-button {
+  margin-left: 10px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.invite-button:hover {
+  background-color: #0056b3;
+}
+
+/* 친구 목록 스타일 */
+.friend-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.friend-item {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.friend-item:last-child {
+  border-bottom: none;
+}
+
+.friend-item label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
 }

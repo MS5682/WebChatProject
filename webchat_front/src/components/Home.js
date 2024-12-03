@@ -90,7 +90,6 @@ const Home = ({ isLoggedIn, userInfo }) => {
     try {
       const response = await fetchWithToken(`/chat-rooms/public?userIdx=${userInfo.userIdx}`);
       const publicRooms = await response.json();
-      console.log('publicRooms', publicRooms);
       setOpenChatRooms(publicRooms);
     } catch (error) {
       console.error('오픈채팅방 목록을 가져오는데 실패했습니다:', error);
@@ -218,7 +217,7 @@ const Home = ({ isLoggedIn, userInfo }) => {
           <ChatRoomCard 
             key={room.id}
             room={room}
-            type="open"
+            type="openList"
             showInactiveOverlay={true}
             userInfo={userInfo}
           />
@@ -383,14 +382,14 @@ const ChatRoomCard = ({ room, type, showInactiveOverlay, userInfo }) => {
   const handleClick = (e) => {
     e.preventDefault();
     
-    if (type === 'open') {
+    if (type === 'openList') {
       setShowJoinModal(true);
     } else {
       if (window.chatWebSocket) {
         window.chatWebSocket.deactivate();
       }
       setTimeout(() => {
-        window.location.href = `/chat/${room.id}?isActive=${room.isActive}`;
+        window.location.href = `/chat/${room.id}?isActive=${room.isActive}&roomType=${type}&roomId=${room.id}`;
       }, 100);
     }
   };
@@ -414,7 +413,7 @@ const ChatRoomCard = ({ room, type, showInactiveOverlay, userInfo }) => {
               </div>
               <h3>
                 {room.name}
-                {type === 'open' && room.hasPassword && (
+                {type === 'openList' && room.hasPassword && (
                   <span className="lock-icon">🔒</span>
                 )}
               </h3>
@@ -435,7 +434,7 @@ const ChatRoomCard = ({ room, type, showInactiveOverlay, userInfo }) => {
               <span className="time">
                 {formatMessageTime(room.lastMessageTime)}
               </span>
-              {(type === 'group' || type === 'open') && (
+              {(type === 'group' || type === 'open' || type === 'openList') && (
                 <span className="participant-count">
                   <span className="icon">👥 </span>
                   {room.participantCount}/{room.maxParticipants}

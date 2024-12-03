@@ -10,6 +10,7 @@ function useChatRoom(userInfo) {
   const { roomId } = useParams();
   const location = useLocation();
   const isActive = new URLSearchParams(location.search).get('isActive') === 'true';
+  const roomType = new URLSearchParams(location.search).get('roomType');
   const [readOnlyMode, setReadOnlyMode] = useState(!isActive);
   
   const [messages, setMessages] = useState(() => {
@@ -94,7 +95,7 @@ function useChatRoom(userInfo) {
       const lastReadTimes = await lastReadResponse.json();
       const myLastReadTime = lastReadTimes[userInfo.userIdx];
 
-      const response = await fetch(`/chat-rooms/${roomId}/unread-messages?userIdx=${userInfo.userIdx}`);
+      const response = await fetchWithToken(`/chat-rooms/${roomId}/unread-messages?userIdx=${userInfo.userIdx}`);
       if (!response.ok) {
         throw new Error('읽지 않은 메시지 로드 실패');
       }
@@ -472,7 +473,7 @@ function useChatRoom(userInfo) {
 
     try {
       const response = await fetchWithToken(`/chat-rooms/${roomId}/quit/${userInfo.userIdx}`, {
-        method: 'DELETE'
+        method: 'POST'
       });
 
       if (!response.ok) {
@@ -527,7 +528,9 @@ function useChatRoom(userInfo) {
     handleFileUpload,
     handleQuitRoom,
     readOnlyMode,
-    isActive
+    isActive,
+    roomType,
+    roomId
   };
 }
 
@@ -550,7 +553,7 @@ const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
     
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      alert('파일 크기는 10MB를 초과할 수 없습니다.');
+      alert('파일 크��는 10MB를 초과할 수 없습니다.');
       return;
     }
     
@@ -743,6 +746,110 @@ const SearchBar = ({
   );
 };
 
+// InviteFriendsModal 컴포넌트 수정
+const InviteFriendsModal = ({ onClose, roomId, userInfo, participants }) => {
+  const [friends, setFriends] = useState([]);
+  const [selectedFriends, setSelectedFriends] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchFriendsList = async () => {
+      try {
+        const response = await fetchWithToken(`/friendship/list/${userInfo.userIdx}?status=ACCEPTED`);
+        const friendships = await response.json();
+        
+        // 현재 채팅방 참여자들의 userIdx 목록 생성
+        const participantUserIdxs = new Set(participants.map(p => p.userIdx));
+        
+        // 참여자가 아닌 친구들만 필터링
+        const filteredFriends = friendships
+          .map(friendship => {
+            const isFromUser = friendship.fromUserIdx === userInfo.userIdx;
+            return {
+              userIdx: isFromUser ? friendship.toUserIdx : friendship.fromUserIdx,
+              name: isFromUser ? friendship.toUserName : friendship.fromUserName
+            };
+          })
+          .filter(friend => !participantUserIdxs.has(friend.userIdx));  // 참여자가 아닌 친구만 선택
+
+        setFriends(filteredFriends);
+      } catch (error) {
+        console.error('친구 목록을 가져오는데 실패했습니다:', error);
+      }
+    };
+
+    fetchFriendsList();
+  }, [userInfo.userIdx, participants]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (selectedFriends.length === 0) {
+      setError('초대할 친구를 선택해주세요.');
+      return;
+    }
+
+    try {
+      const response = await fetchWithToken('/chat-rooms/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          roomId: roomId,
+          participantList: selectedFriends
+        })
+      });
+
+      if (!response.ok) throw new Error('친구 초대에 실패했습니다.');
+      
+      onClose();
+    } catch (error) {
+      console.error('친구 초대 오류:', error);
+      setError(error.message);
+    }
+  };
+
+  const toggleFriendSelection = (userIdx) => {
+    setSelectedFriends(prev => {
+      if (prev.includes(userIdx)) {
+        return prev.filter(id => id !== userIdx);
+      } else {
+        return [...prev, userIdx];
+      }
+    });
+  };
+
+  return (
+    <div className="create-chat-modal-overlay">
+      <div className="create-chat-modal-content">
+        <h2>친구 초대하기</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="friend-list">
+            {friends.map(friend => (
+              <div key={friend.userIdx} className="friend-item">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={selectedFriends.includes(friend.userIdx)}
+                    onChange={() => toggleFriendSelection(friend.userIdx)}
+                  />
+                  {friend.name}
+                </label>
+              </div>
+            ))}
+          </div>
+          {error && <p className="error-message">{error}</p>}
+          <div className="create-chat-modal-buttons">
+            <button type="submit">초대하기</button>
+            <button type="button" className="cancel-button" onClick={onClose}>
+              취소
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 function ChatRoom({ userInfo }) {
   const {
@@ -769,8 +876,12 @@ function ChatRoom({ userInfo }) {
     handleFileUpload,
     handleQuitRoom,
     readOnlyMode,
-    isActive
+    isActive,
+    roomType,
+    roomId
   } = useChatRoom(userInfo);
+
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   return (
     <div className="chat-container">
@@ -783,7 +894,16 @@ function ChatRoom({ userInfo }) {
         <div className="user-list" style={{ width: userListWidth }}>
           <div className="resize-handle" onMouseDown={handleMouseDown}></div>
           <h3>
-            채팅방 참여자 ({participants?.length || 0}) 
+            채팅방 참여자 ({participants?.length || 0})
+            {/* 그룹 채팅일 때만 초대 버튼 표시 */}
+            {roomType === 'group' && (
+              <button 
+                className="invite-button"
+                onClick={() => setShowInviteModal(true)}
+              >
+                친구 초대
+              </button>
+            )}
           </h3>
           <ParticipantList 
             participants={participants}
@@ -858,6 +978,14 @@ function ChatRoom({ userInfo }) {
           />
         )}
       </div>
+      {showInviteModal && (
+        <InviteFriendsModal
+          onClose={() => setShowInviteModal(false)}
+          roomId={roomId}
+          userInfo={userInfo}
+          participants={participants}
+        />
+      )}
     </div>
   );
 }

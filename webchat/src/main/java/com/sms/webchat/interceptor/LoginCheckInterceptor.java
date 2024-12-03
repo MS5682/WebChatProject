@@ -21,7 +21,6 @@ public class LoginCheckInterceptor implements HandlerInterceptor {
                            @NonNull HttpServletResponse response, 
                            @NonNull Object handler) {
         String token = request.getHeader("Authorization");
-        System.out.println("token: " + token);
         if (token != null) {
             if (jwtTokenProvider.validateToken(token)) {
                 return true;
