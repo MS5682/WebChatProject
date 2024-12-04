@@ -17,13 +17,15 @@
 
 2. 자바 17 환경 설치
 
-3. webchat에서 ./gradlew bootRun
+3. Node.js 설치
+   
+4. webchat에서 ./gradlew bootRun
 
-4. webchat_front에서 npm start
+5. webchat_front에서 npm start
 
-5. localhost:3000 으로 접속
+6. localhost:3000 으로 접속
 
-6. application-secret.properties 작성 필요
++ application-secret.properties 작성 필요
     + spring.mail.username=
     + spring.mail.password=
     + 작성 후 이메일 IMAP 사용 
