@@ -40,6 +40,8 @@ WebSocket으로 채팅방 참여자 온/오프라인 구현
 
 ## 데이터베이스
 ###  MySQL
+Spring Boot 내에서 Entity로 설계
+
 https://www.erdcloud.com/d/xq4NqMEW77aaebcL6
 ![image](https://github.com/user-attachments/assets/a01027ff-8230-4aa1-bc44-12d340410173)
 
