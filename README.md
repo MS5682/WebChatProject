@@ -12,16 +12,6 @@
 <img src="https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white">
 
 
-- 회원가입, 로그인, 아이디 찾기, 비밀번호 변경 기능
-Redis를 이용해 회원가입, 아이디 찾기, 비밀번호 변경 시 이메일 인증 코드를 발신하여 저장했다가 코드 비교 후 삭제
-BCryptPasswordEncoder로 사용자 비밀번호 암호화
-JWT로 사용자 인증 토큰 local storage에 저장 후 요청을 보내 로그인한 사용자 id, 이메일, 이름을 헤더에 띄움
-
--채팅방 기능
-WebSocket으로 채팅방 구현
-WebSocket으로 채팅방 참여자 온/오프라인 구현
-채팅방 메시지는 30일간 저장 후 삭제 (사용자들은 Local Storage에 메시지내역 저장하며 미접속동안의 메시지는 데이터베이스에서 읽어 접속시 저장)
-
 ## 실행 방법
 1. 프로젝트 클론
 
