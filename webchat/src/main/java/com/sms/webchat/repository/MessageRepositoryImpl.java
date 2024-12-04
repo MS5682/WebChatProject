@@ -72,7 +72,6 @@ public class MessageRepositoryImpl implements MessageRepositoryCustom {
                 }
             });
             
-            System.out.println("Query results: " + results);
             return results;
         } catch (Exception e) {
             System.err.println("Error executing query: " + e.getMessage());

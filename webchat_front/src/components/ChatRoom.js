@@ -644,6 +644,36 @@ const ChatInputForm = React.memo(({ onSubmit, onFileUpload }) => {
 });
 
 const Message = ({ message, isMe, unreadCount }) => {
+  const [imageUrl, setImageUrl] = useState(null);
+
+  // 이미지를 보안적으로 불러오는 함수
+  const loadSecureImage = async (url) => {
+    try {
+      const response = await fetchWithToken(url);
+      if (!response.ok) throw new Error('이미지 로드 실패');
+      
+      const blob = await response.blob();
+      const secureUrl = URL.createObjectURL(blob);
+      setImageUrl(secureUrl);
+    } catch (error) {
+      console.error('이미지 로드 중 오류:', error);
+    }
+  };
+
+  // 이미지 URL이 있을 때 로드
+  useEffect(() => {
+    if (message.type === 'FILE' && message.fileType?.startsWith('image/')) {
+      loadSecureImage(message.fileUrl);
+      
+      // cleanup: URL 객체 해제
+      return () => {
+        if (imageUrl) {
+          URL.revokeObjectURL(imageUrl);
+        }
+      };
+    }
+  }, [message.fileUrl]);
+
   const handleDownload = async (fileUrl, fileName) => {
     try {
       const response = await fetchWithToken(fileUrl);
@@ -680,13 +710,19 @@ const Message = ({ message, isMe, unreadCount }) => {
       case 'FILE':
         return (
           <div className="message-file">
-            {message.fileType.startsWith('image/') ? (
-              // 이미지 클릭시 새 탭에서 열기
-              <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
-                <img src={message.fileUrl} alt={message.content} className="message-image" />
+            {message.fileType?.startsWith('image/') ? (
+              <a href={imageUrl} target="_blank" rel="noopener noreferrer">
+                <img 
+                  src={imageUrl} 
+                  alt={message.content} 
+                  className="message-image"
+                  onError={(e) => {
+                    console.error('Image loading error:', e);
+                    e.target.onerror = null;
+                  }}
+                />
               </a>
             ) : (
-              // 일반 파일은 클릭시 다운로드
               <div 
                 className="file-download"
                 onClick={() => handleDownload(message.fileUrl, message.content)}

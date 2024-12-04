@@ -70,7 +70,6 @@ public class ChatController {
             responseDTO.setType(MessageDTO.MessageType.SYSTEM);
         }
         
-        System.out.println("responseDTO: " + responseDTO);
 
         // 채팅방에 메시지 전송
         messagingTemplate.convertAndSend("/topic/room/" + roomId, responseDTO);

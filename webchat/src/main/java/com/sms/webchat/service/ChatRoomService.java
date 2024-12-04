@@ -83,10 +83,8 @@ public class ChatRoomService {
             lastReadTime = participant.getJoinedAt(); // 참여 시점부터의 메시지 조회
         }
 
-        System.out.println("lastReadTime: " + lastReadTime);
         List<MessageDTO> unreadMessages = messageRepository.findMessagesWithAttachments(roomId, lastReadTime);
         unreadMessages.forEach(message -> {
-            System.out.println(message);
             if(message.getSender().equals("system")) {
                 message.setType(MessageDTO.MessageType.SYSTEM);
             }

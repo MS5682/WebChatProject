@@ -45,7 +45,6 @@ public class UserController {
             return ResponseEntity.ok().body(new ApiResponseDto(!isDuplicate, 
                 isDuplicate ? "이미 사용중인 아이디입니다." : "사용 가능한 아이디입니다."));
         } catch (Exception e) {
-            System.out.println("에러 발생: " + e.getMessage());
             return ResponseEntity.badRequest().body(new ApiResponseDto(false, e.getMessage()));
         }
     }
