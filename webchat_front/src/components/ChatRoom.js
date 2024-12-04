@@ -101,7 +101,6 @@ function useChatRoom(userInfo) {
         throw new Error('읽지 않은 메시지 로드 실패');
       }
       const unreadMessages = await response.json();
-      console.log(unreadMessages);
       if (unreadMessages.length > 0) {
         setMessages(prevMessages => [
           ...prevMessages,
@@ -148,13 +147,13 @@ function useChatRoom(userInfo) {
           try {
             console.log(message);
             const receivedMessage = JSON.parse(message.body);
-            
-            if (receivedMessage.type === 'SYSTEM') {
-              setMessages(prevMessages => [...prevMessages, receivedMessage]);
-            } else if (receivedMessage.sender !== userInfo.name) {
+            if (receivedMessage.sender !== userInfo.name) {
               setMessages(prevMessages => [...prevMessages, receivedMessage]);
               updateLastReadTime();
             }
+            if (receivedMessage.type === 'SYSTEM') {
+              window.location.reload();
+            } 
           } catch (error) {
             console.error('메시지 처리 중 오류:', error);
           }
@@ -269,15 +268,42 @@ function useChatRoom(userInfo) {
   const initializeRoom = useCallback(async () => {
     try {
       if (userInfo?.userIdx) {
+        // 웹소켓 연결을 먼저 수행
         await connectWebSocket(userInfo.name);
+
+        // 참여자 목록을 가져와서 접근 권한 체크
+        const participantsResponse = await fetchWithToken(`/chat-rooms/participant/${roomId}`);
+        if (!participantsResponse.ok) {
+          throw new Error('참여자 목록을 불러오는데 실패했습니다.');
+        }
+        
+        const participantsList = await participantsResponse.json();
+        const isParticipant = participantsList.some(
+          participant => participant.userIdx === userInfo.userIdx
+        );
+
+        if (!isParticipant) {
+          if (clientRef.current) {
+            clientRef.current.deactivate();  // 웹소켓 연결 해제
+          }
+          alert('접근 권한이 없는 채팅방입니다.');
+          navigate('/');
+          return;
+        }
+
+        // 나머지 초기화 진행
         await fetchParticipants();
         await fetchLastReadTimes();
         await fetchUnreadMessages();
       }
     } catch (error) {
       console.error('채팅방 초기화 중 오류:', error);
+      if (clientRef.current) {
+        clientRef.current.deactivate();  // 에러 발생 시에도 웹소켓 연결 해제
+      }
+      navigate('/');
     }
-  }, [userInfo, connectWebSocket, fetchParticipants, fetchLastReadTimes, fetchUnreadMessages]);
+  }, [userInfo, connectWebSocket, fetchParticipants, fetchLastReadTimes, fetchUnreadMessages, roomId, navigate]);
 
   useEffect(() => {
     initializeRoom();
@@ -838,8 +864,6 @@ const InviteFriendsModal = ({ onClose, roomId, userInfo, participants, clientRef
         roomId: roomId,
         time: new Date().toISOString()
       };
-
-      setMessages(prevMessages => [...prevMessages, systemMessage]);
 
       // WebSocket으로 시스템 메시지 전송
       if (clientRef.current) {  // clientRef 존재 여부 확인

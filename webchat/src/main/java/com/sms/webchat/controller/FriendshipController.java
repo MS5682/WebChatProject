@@ -49,7 +49,7 @@ public class FriendshipController {
     public ResponseEntity<?> respondToFriendship(
             @RequestParam Long friendshipId,
             @RequestParam FriendshipStatus status,
-            @RequestParam Long userIdx) {
+            @RequestParam(required = false) Long userIdx) {
         try {
             if (status == FriendshipStatus.REJECTED) {
                 friendshipService.deleteFriendship(friendshipId);

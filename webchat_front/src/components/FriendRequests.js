@@ -83,7 +83,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const handleAccept = async (requestId) => {
     try {
-      const response = await fetchWithToken(`/friendship/response?friendshipId=${requestId}&status=ACCEPTED`, {
+      const response = await fetchWithToken(`/friendship/response?friendshipId=${requestId}&status=ACCEPTED&userIdx=${userInfo.userIdx}`, {
         method: 'POST'
       });
 
@@ -154,6 +154,18 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
       }
 
       if (result.success) {
+        const blockedRequest = receivedRequests.find(req => req.id === requestId);
+      
+      if (blockedRequest) {
+        // 차단 목록에 추가
+        const blockedUser = {
+          id: requestId,
+          username: blockedRequest.username,
+          userId: blockedRequest.userId,
+          timestamp: new Date()
+        };
+          setBlockedUsers(prev => [...prev, blockedUser]);
+        }
         // 받은 요청 목록에서 제거
         setReceivedRequests(prev => prev.filter(req => req.id !== requestId));
         alert('사용자를 차단했습니다.');
@@ -189,7 +201,7 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
 
   const handleBlockFriend = async (friendId) => {
     try {
-      const response = await fetchWithToken(`/friendship/response?friendshipId=${friendId}&status=BLOCKED`, {
+      const response = await fetchWithToken(`/friendship/response?friendshipId=${friendId}&status=BLOCKED&userIdx=${userInfo.userIdx}`, {
         method: 'POST'
       });
 
@@ -200,6 +212,20 @@ function FriendRequests({ userInfo, isLoggedIn, onlineUsers }) {
       }
 
       if (result.success) {
+        // 친단할 친구 정보 찾기
+        const blockedFriend = friends.find(friend => friend.id === friendId);
+        
+        if (blockedFriend) {
+          // 차단 목록에 추가
+          const blockedUser = {
+            id: friendId,
+            username: blockedFriend.username,
+            userId: blockedFriend.userId,
+            timestamp: new Date()
+          };
+          setBlockedUsers(prev => [...prev, blockedUser]);
+        }
+
         // 친구 목록에서 제거
         setFriends(prev => prev.filter(friend => friend.id !== friendId));
         alert('친구를 차단했습니다.');

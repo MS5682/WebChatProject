@@ -29,7 +29,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         .addPathPatterns("/**")   
         .excludePathPatterns(      
             "/user/**",          
-            "/email/**"     
+            "/email/**"
         );
     }
 
